@@ -95,6 +95,7 @@ void show_dir(struct ext2_inode *ip, int dev)
 
 int search(struct ext2_inode *ip, char *name, int dev)
 {
+    printf("searching for %s in %s\n", name, "");
     char sbuf[BLKSIZE], temp[256];
     struct ext2_dir_entry_2 *dp;
     char *cp;
@@ -102,17 +103,25 @@ int search(struct ext2_inode *ip, char *name, int dev)
 
     for (i=0; i < 12; i++)
     {  // assume DIR at most 12 direct blocks
+
         if (ip->i_block[i] == 0)
             break;
-        // YOU SHOULD print i_block[i] number here
+        printf("i=%d i_block[%d]=%d\n",i,i,ip->i_block[i]);
         get_block(dev, ip->i_block[i], sbuf);
 
         dp = (struct ext2_dir_entry_2 *)sbuf;
         cp = sbuf;
 
         while(cp < sbuf + BLKSIZE){
+            strncpy(temp, dp->name, dp->name_len);
+            temp[dp->name_len] = 0;
+            printf("%4d %4d %4d %s\n",
+                   dp->inode, dp->rec_len, dp->name_len, temp);
             if(strcmp(dp->name, name) == 0)
-                return ip->i_block[i];
+            {
+                printf("found %s : ino = %d\n",name,dp->inode);
+                return dp->inode;
+            }
             cp += dp->rec_len;
             dp = (struct ext2_dir_entry_2 *)cp;
         }
@@ -134,15 +143,48 @@ int tokenizePathName(char* pathname, char* outputArr[])
     return i;
 }
 
+
+void printIndirect(int dev,int block, int offset)
+{
+    char buf[BLKSIZE];
+    get_block(dev,block,buf);
+    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+    for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
+    {
+        printf("%d\t", ipIndirect->i_block[i]);
+    }
+}
+
+void printDoubleIndirect(int dev,int block, int offset)
+{
+    char buf[BLKSIZE];
+    get_block(dev,block,buf);
+    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+
+    for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
+    {
+        printIndirect(dev, ipIndirect->i_block[i], offset);
+    }
+}
+void printTripleIndirect(int dev,int block, int offset)
+{
+    char buf[BLKSIZE];
+    get_block(dev,block,buf);
+    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+
+    for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
+    {
+        printDoubleIndirect(dev, ipIndirect->i_block[i], offset);
+    }
+}
+
 int main() {
     int dev = loadFilesystem("diskimage");
     char buf[BLKSIZE];
-    char buf2[BLKSIZE];
     getSuper(dev, buf);
     if (is_ext2(buf))
     {
-        char buf2[BLKSIZE];
-        getGd(dev, buf2);
+        getGd(dev, buf);
         struct ext2_group_desc *gd = (struct ext2_group_desc*)buf;
         printf("bitmap: %d\n", gd->bg_block_bitmap);
         printf("imap: %d\n", gd->bg_inode_bitmap);
@@ -152,12 +194,43 @@ int main() {
         show_dir(ip, dev);
         //search(ip, "", dev);
         char *output[1024];
-        int count = tokenizePathName("/cs360/is/fun", output);
+        int count = tokenizePathName("/Z/hugefile", output);
         printf("count: %d\n", count);
         for (int i = 0; i < count; i++)
         {
             printf("%s\n", output[i]);
         }
+
+        int ino, blk, offset;
+        int i;
+        for (i=0; i < count; i++){
+            ino = search(ip, output[i], dev);
+            if (ino==0)
+            {
+                printf("can't find %s\n", output[i]);
+                exit(1);
+            }
+
+            // Mailman's algorithm: Convert (dev, ino) to INODE pointer
+            blk    = (ino - 1) / 8 + gd->bg_inode_table;
+            offset = (ino - 1) % 8;
+            get_block(dev, blk, ibuf);
+            ip = (struct ext2_inode *)ibuf + offset;   // ip -> new INODE
+        }
+        ////////////////////////////////////////////////////////////////////////
+        for (i=0; i < 15; i++)
+            printf("iblock[%d]: %d\n", i, ip->i_block[i]);
+        printf("%d, %d, %d", blk, offset, gd->bg_inode_table);
+        printf("\n----------- INDIRECT BLOCKS ---------------\n");
+        printIndirect(dev,ip->i_block[12],gd->bg_inode_table);
+        printf("\n----------- DOUBLE INDIRECT BLOCKS ---------------\n");
+        printDoubleIndirect(dev,ip->i_block[13],gd->bg_inode_table);
+        printf("\n----------- TRIPLE INDIRECT BLOCKS ---------------\n");
+        printTripleIndirect(dev,ip->i_block[14],gd->bg_inode_table);
+        ////////////////////////////////////////////////////////////////////////
+
+
+
     }
     return 0;
 }
