@@ -9,19 +9,11 @@
 #define SUPERBLOCK 1
 #define GROUPDESCRIPTOR 2
 char ibuf[BLKSIZE];
-/*
-struct ext2_group_desc
-{
-    __u32	bg_block_bitmap;	 Blocks bitmap block
-    __u32	bg_inode_bitmap;	 Inodes bitmap block
-    __u32	bg_inode_table;		 Inodes table block
-    __u16	bg_free_blocks_count;	 Free blocks count
-    __u16	bg_free_inodes_count;	 Free inodes count
-    __u16	bg_used_dirs_count;	 Directories count
-    __u16	bg_pad;
-    __u32	bg_reserved[3];
-};
-*/
+
+typedef struct ext2_group_desc  GD;
+typedef struct ext2_super_block SUPER;
+typedef struct ext2_inode       INODE;
+typedef struct ext2_dir_entry_2 DIR; // need this for new version of e2fs
 
 int loadFilesystem(char* filesystem_file)
 {
@@ -37,7 +29,7 @@ int loadFilesystem(char* filesystem_file)
 int is_ext2(char *buf)
 {
     printf("...Checking if it is a ext2 FS...\n");
-    struct ext2_super_block * sp = (struct ext2_super_block *)buf;
+    SUPER * sp = (SUPER *)buf;
     if (0xEF53 != sp->s_magic)
     {
         printf("Error: Not an EXT2 file sytem\n");
@@ -65,10 +57,10 @@ int getGd(int dev1, char *buf)
 }
 
 
-void show_dir(struct ext2_inode *ip, int dev)
+void show_dir(INODE *ip, int dev)
 {
     char sbuf[BLKSIZE], temp[256];
-    struct ext2_dir_entry_2 *dp;
+    DIR *dp;
     char *cp;
     int i;
     for (i=0; i < 12; i++)
@@ -78,7 +70,7 @@ void show_dir(struct ext2_inode *ip, int dev)
             printf("Root inode data block = %d\n\n", ip->i_block[0]);
             get_block(dev, ip->i_block[i], sbuf);
 
-            dp = (struct ext2_dir_entry_2 *)sbuf;
+            dp = (DIR *)sbuf;
             cp = sbuf;
 
             while(cp < sbuf + BLKSIZE){
@@ -88,17 +80,17 @@ void show_dir(struct ext2_inode *ip, int dev)
             dp->inode, dp->rec_len, dp->name_len, temp);
 
             cp += dp->rec_len;
-            dp = (struct ext2_dir_entry_2 *)cp;
+            dp = (DIR *)cp;
         }
     }
 }
 
 
-int search(struct ext2_inode *ip, char *name, int dev)
+int search(INODE *ip, char *name, int dev)
 {
     printf("searching for %s in %d\n", name, dev);
     char sbuf[BLKSIZE], temp[256];
-    struct ext2_dir_entry_2 *dp;
+    DIR *dp;
     char *cp;
     int i;
 
@@ -110,7 +102,7 @@ int search(struct ext2_inode *ip, char *name, int dev)
         printf("i=%d i_block[%d]=%d\n",i,i,ip->i_block[i]);
         get_block(dev, ip->i_block[i], sbuf);
 
-        dp = (struct ext2_dir_entry_2 *)sbuf;
+        dp = (DIR *)sbuf;
         cp = sbuf;
 
         while(cp < sbuf + BLKSIZE){
@@ -124,7 +116,7 @@ int search(struct ext2_inode *ip, char *name, int dev)
                 return dp->inode;
             }
             cp += dp->rec_len;
-            dp = (struct ext2_dir_entry_2 *)cp;
+            dp = (DIR *)cp;
         }
     }
     return 0;
@@ -155,7 +147,7 @@ void printIndirect(int dev,int block, int offset)
 {
     char buf[BLKSIZE];
     get_block(dev,block,buf);
-    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+    INODE *ipIndirect = (INODE *)buf;
     for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
     {
         printf("%d\t", ipIndirect->i_block[i]);
@@ -166,7 +158,7 @@ void printDoubleIndirect(int dev,int block, int offset)
 {
     char buf[BLKSIZE];
     get_block(dev,block,buf);
-    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+    INODE *ipIndirect = (INODE *)buf;
     for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
     {
         printIndirect(dev, ipIndirect->i_block[i], offset);
@@ -176,7 +168,7 @@ void printTripleIndirect(int dev,int block, int offset)
 {
     char buf[BLKSIZE];
     get_block(dev,block,buf);
-    struct ext2_inode *ipIndirect = (struct ext2_inode *)buf;
+    INODE *ipIndirect = (INODE *)buf;
 
     for (int i = 0-offset; ipIndirect->i_block[i] != 0 && i < 256-offset; i++)
     {
@@ -184,7 +176,7 @@ void printTripleIndirect(int dev,int block, int offset)
     }
 }
 
-void printAllBlocks(int dev, const struct ext2_inode node, int offset)
+void printAllBlocks(int dev, const INODE node, int offset)
 {
     for (int i=0; i < 15; i++)
         printf("iblock[%d]: %d\n", i, node.i_block[i]);
@@ -212,12 +204,12 @@ int main() {
     if (is_ext2(buf))
     {
         getGd(dev, buf);
-        struct ext2_group_desc *gd = (struct ext2_group_desc*)buf;
+        GD *gd = (GD*)buf;
         printf("bitmap: %d\n", gd->bg_block_bitmap);
         printf("imap: %d\n", gd->bg_inode_bitmap);
         printf("inodes_start: %d\n", gd->bg_inode_table);
         get_block(dev, gd->bg_inode_table, ibuf);
-        struct ext2_inode *ip = (struct ext2_inode *)ibuf + 1;
+        INODE *ip = (INODE *)ibuf + 1;
         show_dir(ip, dev);
         char *output[1024];
         int count = tokenizePathName("/Z/hugefile", output);
@@ -236,11 +228,9 @@ int main() {
             blk    = (ino - 1) / 8 + gd->bg_inode_table;
             offset = (ino - 1) % 8;
             get_block(dev, blk, ibuf);
-            ip = (struct ext2_inode *)ibuf + offset;   // ip -> new INODE
+            ip = (INODE *)ibuf + offset;   // ip -> new INODE
         }
-        ////////////////////////////////////////////////////////////////////////
         printAllBlocks(dev, *ip, gd->bg_inode_table);
-        ////////////////////////////////////////////////////////////////////////
 
 
 
