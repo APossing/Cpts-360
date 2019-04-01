@@ -1,5 +1,7 @@
 /*********** util.c file ****************/
 
+#include <unistd.h>
+
 /**** globals defined in main.c file ****/
 extern MINODE minode[NMINODE];
 extern MINODE *root;
@@ -26,8 +28,8 @@ int put_block(int dev, int blk, char *buf)
 int tokenize(char *pathname)
 {
     name[0] = 0;
-    name[0] = strtok(pathname, " ");
-    for (n = 1; name[n] = strtok(NULL, " "); n++)
+    name[0] = strtok(pathname, "/");
+    for (n = 1; name[n] = strtok(NULL, "/"); n++)
     {
         printf("n: %s", n, name[n]);
     }
@@ -78,7 +80,7 @@ MINODE *iget(int dev, int ino)
   return 0;
 }
 
-iput(MINODE *mip)
+void iput(MINODE *mip)
 {
  int i, block, offset;
  char buf[BLKSIZE];
@@ -108,6 +110,21 @@ iput(MINODE *mip)
 
 } 
 
+int mySearchCompare(char str1[], char str2[], int len)
+{
+    int i = 0;
+    for(i = 0; i < len && str2[i] != 0; i++)
+    {
+        if (str1[i] > str2[i])
+            return 1;
+        if (str1[i] < str2[i])
+            return -1;
+    }
+    if (str2[i] != 0)
+        return -1;
+    return 0;
+}
+
 int search(MINODE *mip, char *name)
 {
   printf("searching for %s in %d\n", name, dev);
@@ -115,6 +132,7 @@ int search(MINODE *mip, char *name)
     DIR *dp;
     char *cp;
     int i;
+    ip = &(mip->INODE);
 
     for (i=0; i < 12; i++)
     {  // assume DIR at most 12 direct blocks
@@ -132,7 +150,8 @@ int search(MINODE *mip, char *name)
             temp[dp->name_len] = 0;
             printf("%4d %4d %4d %s\n",
                    dp->inode, dp->rec_len, dp->name_len, temp);
-            if(strcmp(dp->name, name) == 0)
+            printf("%s, %s compare\n",dp->name, name);
+            if(mySearchCompare(dp->name, name, dp->name_len) == 0)
             {
                 printf("found %s : ino = %d\n",name,dp->inode);
                 return dp->inode;
@@ -155,7 +174,7 @@ int getino(char *pathname)
       return 2;
 
   if (pathname[0]=='/')
-    mip = iget(dev, 2);
+    mip = iget(dev, 2);//TODO maybe *dev
   else
     mip = iget(running->cwd->dev, running->cwd->ino);
 

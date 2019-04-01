@@ -15,15 +15,12 @@ extern char line[256], cmd[32], pathname[256];
 #define GROUP  000070
 #define OTHER  000007
 
-void change_dir()
+int change_dir()
 {
     printf("cd");
   char temp[EXT2_NAME_LEN];
-  char buf[BLKSIZE];
-  DIR *dp;
-  MINODE *ip, *newip, *cwd;
+  MINODE *newip;
   int ino, dev;
-  char c;
 
   if (pathname[0] == 0)
   {
@@ -56,7 +53,7 @@ void change_dir()
 
   iput(running->cwd);
   running->cwd = newip;
-  printf("after cd : cwd = [%d %d]\n", running->cwd-dev, running->cwd->ino);
+  printf("after cd : cwd = [%d %d]\n", running->cwd->dev, running->cwd->ino);
   return 0;
 
 
@@ -99,11 +96,11 @@ int findmyname(MINODE *parent, u32 myino, char *myname)
             temp[dp->name_len] = 0;
             printf("%4d %4d %4d %s\n",
                    dp->inode, dp->rec_len, dp->name_len, temp);
-            if(dp->inode = myino)
+            if(dp->inode == myino)
             {
                 strncpy(myname, dp->name, dp->name_len);
                 myname[dp->name_len] = 0;
-                printf("found %s : ino = %d\n",name,dp->inode);
+                //printf("found %s : ino = %d\n",myname,dp->inode);
                 return 0;
             }
             cp += dp->rec_len;
@@ -115,11 +112,7 @@ int findmyname(MINODE *parent, u32 myino, char *myname)
 
 int ls_file(MINODE *mip, char *name)
 {
-    printf("\nls_file\n");
-    int ino = getino(dirname);
-    mip = iget(dev, ino);
     u16 mode, mask;
-    struct stat file_info;
     mode = mip->INODE.i_mode;
     if (S_ISDIR(mode))
         putchar('d');
@@ -168,7 +161,6 @@ int ls_file(MINODE *mip, char *name)
 
 int ls_dir(MINODE *mip)
 {
-    printf("ls_dir");
     char buf[BLKSIZE], temp[256];
     DIR *dp;
     char *cp;
@@ -197,45 +189,28 @@ int ls_dir(MINODE *mip)
 
 int list_file()
 {
-    printf("list_file");
      MINODE *mip;
      u16 mode;
      int dev, ino;
-     printf("1");
-     if (pathname == NULL)
+     if (pathname[0] == 0)
      {
-         printf("isNull");
          return ls_dir(running->cwd);
      }
-     printf("2");
      dev = root->dev;
-     printf("3");
      ino = getino(pathname);
-     printf("4");
      if (ino == 0)
      {
          printf("file does not exist: %s\n", pathname);
          return -1;
      }
      mip = iget(dev, ino);
-    printf("5");
      mode = mip->INODE.i_mode;
      if (!S_ISDIR(mode))
-         ls_file(mip, (char *)basename(name[0]));
+         ls_file(mip, basename(name[0]));
      else
          ls_dir(mip);
      iput(mip);
 
-}
-
-
-
-void pwd(MINODE *wd)
-{
-    if (wd == root)
-        printf("/\n");
-    else
-        rpwd(wd);
 }
 
 void rpwd(MINODE *wd)
@@ -252,7 +227,17 @@ void rpwd(MINODE *wd)
     rpwd(parent);
     iput(parent);
     printf("/%s", myname);
-    return 0;
+    return;
+}
+
+
+void pwd(MINODE *wd)
+{
+    if (wd == root)
+        printf("/");
+    else
+        rpwd(wd);
+    printf("\n");
 }
 
 void myQuit()

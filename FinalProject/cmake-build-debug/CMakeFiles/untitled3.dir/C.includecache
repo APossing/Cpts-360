@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/adam/Documents/Cpts-360/FinalProject/cd_ls_pwd.c
+
+/home/adam/Documents/Cpts-360/FinalProject/main.c
+stdio.h
+-
+stdlib.h
+-
+fcntl.h
+-
+string.h
+-
+time.h
+-
+libgen.h
+-
+sys/stat.h
+-
+ext2fs/ext2_fs.h
+-
+type.h
+/home/adam/Documents/Cpts-360/FinalProject/type.h
+util.c
+/home/adam/Documents/Cpts-360/FinalProject/util.c
+cd_ls_pwd.c
+/home/adam/Documents/Cpts-360/FinalProject/cd_ls_pwd.c
+
+/home/adam/Documents/Cpts-360/FinalProject/type.h
+
+/home/adam/Documents/Cpts-360/FinalProject/util.c
+unistd.h
+-
+
