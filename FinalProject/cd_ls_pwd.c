@@ -10,6 +10,7 @@ extern int    n;
 extern int fd, dev;
 extern int nblocks, ninodes, bmap, imap, inode_start;
 extern char line[256], cmd[32], pathname[256];
+extern int isDev;
 
 #define OWNER  000700
 #define GROUP  000070
@@ -251,5 +252,167 @@ void myQuit()
     }
 }
 
+int enter_name(MINODE *pip, int myino, char *myname)
+{
+    int i = 0;
+    char buf[BLKSIZE];
+
+    for(i =0; i< 12; i++)
+    {
+        if (pip->INODE.i_block[i] == 0)
+            break;
+        get_block(dev, pip->INODE.i_block[i], buf);
+        dp=(DIR *)buf;
+        char * cp = buf;
+        int need_length = 4*( (8 + strlen(myname) + 3)/4 );
+        if(isDev){printf("length: %d\n", need_length);}
+
+        get_block(pip->dev, pip->INODE.i_block[i], buf);
+
+        dp= (DIR*)buf;
+        cp = buf;
+        // step to LAST entry in block: int blk = parent->INODE.i_block[i];
+
+        printf("step to LAST entry in data block %d\n", pip->INODE.i_block[i]);
+        while (cp + dp->rec_len < buf + BLKSIZE){
+
+            /****** Technique for printing, compare, etc.******
+            c = dp->name[dp->name_len];
+            dp->name[dp->name_len] = 0;
+            printf("%s ", dp->name);
+            dp->name[dp->name_len] = c;
+            **************************************************/
+
+            cp += dp->rec_len;
+            dp = (DIR *)cp;
+        }
+        // dp NOW points at last entry in block
+        printf("last_entry: %s\n", dp->name);
+        cp = (char *)dp;
+        int IDEAL_LEN = 4*( (8 + dp->name_len + 3)/4 );
+        int remain = dp->rec_len - IDEAL_LEN;
+        printf("remain: %d\n", remain);
+        if (remain >= need_length)
+        {
+            dp->rec_len = IDEAL_LEN;
+            cp += dp->rec_len;
+            dp = (DIR*)cp;
+
+            dp->inode = myino;
+            dp->rec_len = 1024 - ((u32)cp-(u32) buf);
+            printf("rec_len: %d\n", dp->rec_len);
+            dp->name_len = strlen(myname);
+            dp->file_type = EXT2_FT_DIR;
+            strcpy(dp->name, myname);
+            put_block(dev,pip->INODE.i_block[i],buf);
+            return 1;
+
+        }
+    }
+    printf("Number of Data Blocks: %d\n", i);
+
+    dp->inode=myino;
+    dp->rec_len = BLKSIZE;
+    dp->name_len=strlen(myname);
+    dp->file_type=EXT2_FT_DIR;
+    strcpy(dp->name, myname);
+
+    put_block(dev, pip->INODE.i_block[i], buf);
+    return 1;
+
+
+}
+
+
+int mymkdir(MINODE *pip, char *name)
+{
+    int ino = ialloc(dev);
+    if (isDev){printf("ino: %d", ino);}
+    int bno = balloc(dev);
+    if (isDev){printf("bno: %d", bno);}
+    MINODE *mip = iget(dev, ino);
+    INODE *ip = &mip->INODE;
+
+    ip->i_mode = 0x41ED;		// OR 040755: DIR type and permissions
+    ip->i_uid  = running->uid;	// Owner uid
+    ip->i_gid  = running->gid;	// Group Id
+    ip->i_size = BLKSIZE;		// Size in bytes
+    ip->i_links_count = 2;	        // Links count=2 because of . and ..
+    ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);  // set to current time
+    ip->i_blocks = 2;                	// LINUX: Blocks count in 512-byte chunks
+    ip->i_block[0] = bno;             // new DIR has one data block
+    for (int i =0; i < 15; i++) {
+        ip->i_block[i] = 0;
+    }
+    mip->dirty = 1;
+    iput(mip);
+
+    char buf[BLKSIZE];
+    char *cp;
+    get_block(dev, bno, buf);
+    dp=(DIR*)buf;
+    cp=buf;
+
+    dp->inode=ino;
+    dp->rec_len = 12;
+    dp->name_len = 1;
+    dp->file_type=(u8)EXT2_FT_DIR;
+    dp->name[0] ='.';
+    cp+=dp->rec_len;
+    dp=(DIR*)cp;
+
+    dp->inode= pip->ino;
+    dp->rec_len=BLKSIZE-12;
+    dp->name_len=2;
+    dp->file_type=(u8)EXT2_FT_DIR;
+    dp->name[0]=dp->name[1]='.';
+
+    put_block(dev,bno, buf);
+    enter_name(pip, ino, name);
+
+
+
+}
+
+
+int mk_dir()
+{
+    MINODE *mip;
+    int dev;
+    if (pathname[0] == '/') {
+        mip = root;
+    }
+    else
+    {
+        mip = running->cwd;
+    }
+    dev = mip->dev;
+
+    char temp[BLKSIZE];
+    char parent[BLKSIZE];
+    char child[BLKSIZE];
+
+    strcpy(temp, pathname);
+    strcpy(parent, dirname(temp));
+
+    strcpy(temp, pathname);
+    strcpy(child, basename(temp));
+
+    int pino = getino(parent);
+    MINODE * pip = iget(dev, pino);
+
+    if(!S_ISDIR(pip->INODE.i_mode))
+    {
+        printf("error: not a directory\n");
+        return 0;
+    }
+    if (getino(pathname) != 0)
+    {
+        printf("directory already exists!\n");
+        return 0;
+    }
+    mymkdir(pip, child);
+
+}
 
 

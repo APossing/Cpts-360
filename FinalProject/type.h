@@ -42,6 +42,7 @@ typedef struct proc{
   struct proc *next;
   int          pid;
   int          uid;
+  int          gid;
   int          status;
   MINODE      *cwd;
   OFT         *fd[NFD];

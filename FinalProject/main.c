@@ -23,6 +23,7 @@ int    n;          // number of component strings
 int    fd, dev;
 int    nblocks, ninodes, bmap, imap, inode_start;
 char   line[256], cmd[32], pathname[256];
+int isDev = 1;
 
 #include "util.c"
 #include "cd_ls_pwd.c"
@@ -60,7 +61,7 @@ int mount_root()
   root = iget(dev, 2);
 }
 
-char *disk = "mydisk";
+char *disk = "disk";
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -108,7 +109,7 @@ int main(int argc, char *argv[ ])
 
   //printf("hit a key to continue : "); getchar();
   while(1){
-    printf("input command : [ls|cd|pwd|quit] ");
+    printf("input command : [ls|cd|pwd|quit|mkdir] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
     if (line[0]==0)
@@ -125,9 +126,10 @@ int main(int argc, char *argv[ ])
        change_dir();
     if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
-
     if (strcmp(cmd, "quit")==0)
-       quit();
+       myQuit();
+    if (strcmp(cmd, "mkdir")==0)
+      mk_dir();
   }
 }
  
