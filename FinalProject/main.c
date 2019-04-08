@@ -130,6 +130,8 @@ int main(int argc, char *argv[ ])
        myQuit();
     if (strcmp(cmd, "mkdir")==0)
       mk_dir();
+      if (strcmp(cmd, "creat")==0)
+          creat_file();
   }
 }
  

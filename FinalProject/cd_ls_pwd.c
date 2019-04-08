@@ -216,10 +216,9 @@ int list_file()
 
 void rpwd(MINODE *wd)
 {
-    char buf[BLKSIZE], myname[256], *cp;
-    MINODE *parent, *ip;
+    char myname[256];
+    MINODE *parent;
     u32 myino, parentino;
-    DIR *dp;
     if (wd==root) return;
     parentino = find_ino(wd, &myino);
     parent = iget(dev, parentino);
@@ -369,6 +368,9 @@ int mymkdir(MINODE *pip, char *name)
 
     put_block(dev,bno, buf);
     enter_name(pip, ino, name);
+//    pip->dirty = 1;
+//    iput(pip);
+    return 1;
 
 
 
@@ -412,7 +414,85 @@ int mk_dir()
         return 0;
     }
     mymkdir(pip, child);
+    pip->INODE.i_links_count++;
+    pip->INODE.i_atime=time(0L);
+    pip->dirty = 1;
+
+    iput(pip);
+    return 1;
 
 }
 
 
+int my_creat(MINODE *pip, char *name)
+{
+    int ino = ialloc(dev);
+    if (isDev){printf("ino: %d", ino);}
+    int bno = balloc(dev);
+    if (isDev){printf("bno: %d", bno);}
+    MINODE *mip = iget(dev, ino);
+    INODE *ip = &mip->INODE;
+
+    ip->i_mode = 0x81A4;		// OR 0100644: FILE type
+    ip->i_uid  = running->uid;	// Owner uid
+    ip->i_gid  = running->gid;	// Group Id
+    ip->i_size = 0;		// Size in bytes
+    ip->i_links_count = 1;	        // Links count=2 because of . and ..
+    ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);  // set to current time
+    ip->i_blocks = 0;                	// LINUX: Blocks count in 512-byte chunks
+    ip->i_block[0] = bno;             // new DIR has one data block
+    for (int i =0; i < 15; i++) {
+        ip->i_block[i] = 0;
+    }
+    mip->dirty = 1;
+    iput(mip);
+    enter_name(pip, ino, name);
+    return ino;
+
+}
+
+
+int creat_file()
+{
+    MINODE *mip;
+    int dev;
+    if (pathname[0] == '/') {
+        mip = root;
+    }
+    else
+    {
+        mip = running->cwd;
+    }
+    dev = mip->dev;
+
+    char temp[BLKSIZE];
+    char parent[BLKSIZE];
+    char child[BLKSIZE];
+
+    strcpy(temp, pathname);
+    strcpy(parent, dirname(temp));
+
+    strcpy(temp, pathname);
+    strcpy(child, basename(temp));
+
+    int pino = getino(parent);
+    MINODE * pip = iget(dev, pino);
+
+    if(!S_ISDIR(pip->INODE.i_mode))
+    {
+        printf("error: not a directory\n");
+        return 0;
+    }
+    if (getino(pathname) != 0)
+    {
+        printf("file already exists!\n");
+        return 0;
+    }
+    my_creat(pip, child);
+
+    pip->INODE.i_atime=time(0L);
+    pip->dirty = 1;
+
+    iput(pip);
+    return 1;
+}
