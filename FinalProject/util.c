@@ -236,36 +236,28 @@ int ialloc(int dev)
     return 0;
 }
 
-int decFreeDataBlocks(int dev)
+
+unsigned long balloc( int dev )
 {
-    char buf[BLKSIZE];
-    get_block(dev, 1, buf);
-    sp = (SUPER *)buf;
-    sp->s_free_blocks_count--;
-    put_block(dev, 1, buf);
+    int iter = 0, inodeCount = 0;
+    char buf[1024];
 
-    get_block(dev, 2, buf);
-    gp = (GD *) buf;
-    gp->bg_free_blocks_count--;
-    put_block(dev, 2, buf);
-}
+    inodeCount = sp->s_blocks_count; // /	(BLOCK_SIZE*128);
 
+    get_block( dev, (gp->bg_block_bitmap),(char*)&buf );
 
-int balloc(int dev)
-{
-    char buf[BLKSIZE];
-
-    get_block(dev, bmap, buf);
-
-    for(int i =0; i < nblocks; i++)
+    for( iter = 0; iter < inodeCount; iter++  )
     {
-        if (tst_bit(buf, i) == 0)
+        if (tst_bit((char*)&buf,iter) ==0 )
         {
-            set_bit(buf, i);
-            decFreeDataBlocks(dev);
-            put_block(dev, bmap, buf);
-            return i+1;
+            set_bit((char*)&buf,iter );
+            put_block(dev,gp->bg_block_bitmap,(char*)&buf);
+            printf("BALLOCRETURNING:%d\n",iter+1);
+            return iter+1;
         }
     }
+
+    return -1;
 }
+
 

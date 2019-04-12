@@ -109,7 +109,7 @@ int main(int argc, char *argv[ ])
 
   //printf("hit a key to continue : "); getchar();
   while(1){
-    printf("input command : [ls|cd|pwd|quit|mkdir] ");
+    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
     if (line[0]==0)
@@ -121,28 +121,27 @@ int main(int argc, char *argv[ ])
     printf("cmd=%s pathname=%s\n", cmd, pathname);
 
     if (strcmp(cmd, "ls")==0)
-       list_file();
+        list_file();
     if (strcmp(cmd, "cd")==0)
-       change_dir();
+        change_dir();
     if (strcmp(cmd, "pwd")==0)
-       pwd(running->cwd);
+        pwd(running->cwd);
     if (strcmp(cmd, "quit")==0)
-       myQuit();
+        myQuit();
     if (strcmp(cmd, "mkdir")==0)
-      mk_dir();
-      if (strcmp(cmd, "creat")==0)
-          creat_file();
+        mk_dir();
+    if (strcmp(cmd, "creat")==0)
+        creat_file();
+    if (strcmp(cmd, "link")==0)
+      my_link();
+    if (strcmp(cmd, "unlink")==0)
+      my_link();
+    if (strcmp(cmd, "symlink")==0)
+      my_symlink();
+    if (strcmp(cmd, "stat")==0)
+      my_stat();
+    if (strcmp(cmd, "touch")==0)
+      my_touch();
   }
 }
- 
-int quit()
-{
-  int i;
-  MINODE *mip;
-  for (i=0; i<NMINODE; i++){
-    mip = &minode[i];
-    if (mip->refCount > 0)
-      iput(mip);
-  }
-  exit(0);
-}
+
