@@ -47,3 +47,27 @@ typedef struct proc{
   MINODE      *cwd;
   OFT         *fd[NFD];
 }PROC;
+// Mount Table structure
+typedef struct mtable{
+    int
+            dev;
+    int
+            ninodes;
+    int
+            nblocks;
+    int
+            free_blocks;
+    int
+            free_inodes;
+    int
+            bmap;
+    int
+            imap;
+    int
+            iblock;
+    MINODE *mntDirPtr;
+    char
+            devName[64];
+    char
+            mntName[64];
+}MTABLE;

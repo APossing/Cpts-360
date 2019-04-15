@@ -23,17 +23,6 @@ int put_block(int dev, int blk, char *buf)
 {
    lseek(dev, (long)blk*BLKSIZE, 0);
    write(dev, buf, BLKSIZE);
-}   
-
-int tokenize(char *pathname)
-{
-    name[0] = 0;
-    name[0] = strtok(pathname, "/");
-    for (n = 1; name[n] = strtok(NULL, "/"); n++)
-    {
-        printf("n: %s", n, name[n]);
-    }
-  // tokenize pathname in GLOBAL gpath[]
 }
 
 // return minode pointer to loaded INODE
@@ -80,6 +69,20 @@ MINODE *iget(int dev, int ino)
   return 0;
 }
 
+void decFreeBlocks(int dev)
+{
+    char buf[BLKSIZE];
+    get_block(dev, 1, buf);
+    sp = (SUPER *)buf;
+    sp->s_free_blocks_count--;
+    put_block(dev, 1,buf);
+
+    get_block(dev, 2,buf);
+    gp = (GD *)buf;
+    gp->bg_free_blocks_count--;
+    put_block(dev, 2,buf);
+}
+
 void iput(MINODE *mip)
 {
  int i, block, offset;
@@ -108,52 +111,36 @@ void iput(MINODE *mip)
 
  put_block(mip->dev, block, buf);
 
-} 
-
-int mySearchCompare(char str1[], char str2[], int len)
-{
-    int i = 0;
-    for(i = 0; i < len && str2[i] != 0; i++)
-    {
-        if (str1[i] > str2[i])
-            return 1;
-        if (str1[i] < str2[i])
-            return -1;
-    }
-    if (str2[i] != 0)
-        return -1;
-    return 0;
 }
-
+int tokenize(char *pathname)
+{
+    char *s;
+    strcpy(line, pathname);
+    n = 0;
+    s = strtok(line, "/");
+    while(s){
+        name[n++] = s;
+        s = strtok(0, "/");
+    }
+}
 int search(MINODE *mip, char *name)
 {
-  printf("searching for %s in %d\n", name, dev);
-    char sbuf[BLKSIZE], temp[256];
-    DIR *dp;
-    char *cp;
     int i;
-    ip = &(mip->INODE);
-
-    for (i=0; i < 12; i++)
-    {  // assume DIR at most 12 direct blocks
-
-        if (ip->i_block[i] == 0)
-            break;
-        printf("i=%d i_block[%d]=%d\n",i,i,ip->i_block[i]);
-        get_block(dev, ip->i_block[i], sbuf);
-
+    char *cp, temp[256], sbuf[BLKSIZE];
+    DIR *dp;
+    for (i=0; i<12; i++){ // search DIR direct blocks only
+        if (mip->INODE.i_block[i] == 0)
+            return 0;
+        get_block(mip->dev, mip->INODE.i_block[i], sbuf);
         dp = (DIR *)sbuf;
         cp = sbuf;
-
-        while(cp < sbuf + BLKSIZE){
+        while (cp < sbuf + BLKSIZE){
             strncpy(temp, dp->name, dp->name_len);
             temp[dp->name_len] = 0;
-            printf("%4d %4d %4d %s\n",
+            printf("%8d%8d%8u %s\n",
                    dp->inode, dp->rec_len, dp->name_len, temp);
-            printf("%s, %s compare\n",dp->name, name);
-            if(mySearchCompare(dp->name, name, dp->name_len) == 0)
-            {
-                printf("found %s : ino = %d\n",name,dp->inode);
+            if (strcmp(name, temp)==0){
+                printf("found %s : inumber = %d\n", name, dp->inode);
                 return dp->inode;
             }
             cp += dp->rec_len;
@@ -195,13 +182,9 @@ int getino(char *pathname)
    return ino;
 }
 
-int tst_bit(char *buf, int bit)
+int tst_bit(char *buf, int BIT)
 {
-    int i, j;
-    i = bit/8; j=bit%8;
-    if (buf[i] & (1 << j))
-        return 1;
-    return 0;
+    return buf[BIT / 8] & (1 << (BIT % 8));
 }
 
 int set_bit(char *buf, int bit)
@@ -237,27 +220,249 @@ int ialloc(int dev)
 }
 
 
-unsigned long balloc( int dev )
+unsigned long balloc(int dev)
 {
-    int iter = 0, inodeCount = 0;
-    char buf[1024];
+    int i;
+    char buf[BLKSIZE];
+    int nblocks;
+    SUPER *temp;
 
-    inodeCount = sp->s_blocks_count; // /	(BLOCK_SIZE*128);
+    // get total number of blocks
+    get_block(dev,1,buf);
+    temp = (SUPER *)buf;
+    nblocks = temp->s_blocks_count;
+    put_block(dev,1,buf);
 
-    get_block( dev, (gp->bg_block_bitmap),(char*)&buf );
+    get_block(dev, bmap,buf);
 
-    for( iter = 0; iter < inodeCount; iter++  )
+    for(i = 0; i < nblocks ; i++)
     {
-        if (tst_bit((char*)&buf,iter) ==0 )
+        if(tst_bit(buf,i) == 0)
         {
-            set_bit((char*)&buf,iter );
-            put_block(dev,gp->bg_block_bitmap,(char*)&buf);
-            printf("BALLOCRETURNING:%d\n",iter+1);
-            return iter+1;
+            set_bit(buf,i);
+            put_block(dev,bmap,buf);
+
+            decFreeBlocks(dev);
+            return i+1;
         }
     }
-
-    return -1;
+    return 0;
+}
+int incFreeInodes(int dev)
+{
+    char buf[BLKSIZE];
+// inc free inodes count in SUPER and GD
+    get_block(dev, 1, buf);
+    sp = (SUPER *)buf;
+    sp->s_free_inodes_count++;
+    put_block(dev, 1, buf);
+    get_block(dev, 2, buf);
+    gp = (GD *)buf;
+    gp->bg_free_inodes_count++;
+    put_block(dev, 2, buf);
 }
 
+int idalloc(int dev, int ino)
+{
+    int i;
+    char buf[BLKSIZE];
+// get inode bitmap block
+    get_block(dev, imap, buf);
+    clr_bit(buf, ino-1);
+// write buf back
+    put_block(dev, imap, buf);
+// update free inode count in SUPER and GD
+    incFreeInodes(dev);
+}
+
+void bdalloc(int dev, int block)
+{
+    char buff[BLKSIZE];
+    get_block(dev, bmap, buff);
+    clr_bit(buff, block-1);
+    put_block(dev, bmap, buff);
+}
+
+void rm_child(MINODE *pmip, char *name)
+{
+    INODE* pip = &pmip->INODE;
+    char sbuf[BLKSIZE], temp[256];
+    DIR *dp, *startDp;
+    char  *finalCp, *cp;
+    int first, last;
+    DIR *predDir;
+
+    for (int i=0; i < 12; i++)
+    {  // assume DIR at most 12 direct blocks
+
+        if (pip->i_block[i] == 0)
+            return;
+        printf("i=%d i_block[%d]=%d\n",i,i,pip->i_block[i]);
+        get_block(dev, pip->i_block[i], sbuf);
+
+        dp = (DIR *)sbuf;
+        cp = sbuf;
+        int total_length = 0;
+        while(cp < sbuf + BLKSIZE){
+            strncpy(temp, dp->name, dp->name_len);
+            total_length += dp->rec_len;
+            temp[dp->name_len] = 0;
+            if (!strcmp(temp, name))
+            {
+                if (cp == sbuf && cp + dp->rec_len == sbuf + BLKSIZE) //first
+                {
+                    memset(sbuf, '\0', BLKSIZE);
+                    bdalloc(dev, ip->i_block[i]);
+
+                    pip->i_size -=BLKSIZE;
+                    while(pip->i_block[i+i] && i+1 < 12)
+                    {
+                        get_block(dev, pip->i_block[i], sbuf);
+                        put_block(dev, pip->i_block[i-1], sbuf);
+                        i++;
+                    }
+                }
+                else if(cp+dp->rec_len == sbuf + BLKSIZE) //last
+                {
+                    predDir->rec_len +=dp->rec_len;
+                    put_block(dev, pip->i_block[i], sbuf);
+                }
+                else //middle
+                {
+                    int removed_length = dp->rec_len;
+                    char* cNext = cp + dp->rec_len;
+                    DIR* dNext = (DIR *)cNext;
+                    while(total_length + dNext->rec_len < BLKSIZE)
+                    {
+                        total_length += dNext->rec_len;
+                        int next_length = dNext->rec_len;
+                        dp->inode = dNext->inode;
+                        dp->rec_len = dNext->rec_len;
+                        dp->name_len = dNext->name_len;
+                        strncpy(dp->name, dNext->name, dNext->name_len);
+                        cNext += next_length;
+                        dNext = (DIR *)cNext;
+                        cp+= next_length;
+                        dp = (DIR *)cp;
+                    }
+                    dp->inode = dNext->inode;
+                    // add removed rec_len to the last entry of the block
+                    dp->rec_len = dNext->rec_len + removed_length;
+                    dp->name_len = dNext->name_len;
+                    strncpy(dp->name, dNext->name, dNext->name_len);
+                    put_block(dev, pip->i_block[i], sbuf); // save
+                    pmip->dirty = 1;
+                    return;
+                }
+                pmip->dirty=1;
+                iput(pmip);
+                return;
+            }
+            predDir = dp;
+            cp += dp->rec_len;
+            dp = (DIR *)cp;
+        }
+    }
+}
+
+void deallocateInodeDataBlocks(int dev, MINODE* mip)
+{
+    char bitmap[1024],dblindbuff[1024], buff[BLKSIZE];
+    int i = 0;
+    int j = 0;
+    int indblk,dblindblk;
+    unsigned long *indirect,*doubleindirect;
+    get_block(dev,bmap,bitmap);
+    for ( i = 0; i<12; i++)
+    {
+        if (mip->INODE.i_block[i]!=0)
+        {
+            clr_bit(bitmap, mip->INODE.i_block[i]-1);
+            mip->INODE.i_block[i]=0;
+        }
+        else
+        {
+            put_block(dev,bmap,bitmap);
+            return ;
+        }
+    }
+    if (mip->INODE.i_block[i]!=0)
+    {
+        indblk = mip->INODE.i_block[i];
+        get_block(dev,indblk,buff);
+        indirect = (unsigned long *)buff;
+        for (i=0;i<256;i++)
+        {
+            if(*indirect != 0)
+            {
+                clr_bit(bitmap, *indirect-1);
+                *indirect = 0;
+                indirect++;
+            }
+            else
+            {
+                clr_bit(bitmap, indblk-1);
+                put_block(dev,indblk,buff);
+                put_block(dev,bmap,bitmap);
+                mip->INODE.i_block[12] = 0;
+                return;
+            }
+        }
+    }
+    else
+    {
+        put_block(dev,bmap,bitmap);
+        return;
+    }
+    if (mip->INODE.i_block[13]!=0)
+    {
+        dblindblk = mip->INODE.i_block[13];
+        get_block(dev,dblindblk,dblindbuff);
+        doubleindirect = (unsigned long *)dblindbuff;
+        for (i=0;i<256;i++)
+        {
+            indblk = *doubleindirect;
+            get_block(dev,indblk,buff);
+            indirect = (unsigned long *)buff;
+            for (j=0;j<256;j++)
+            {
+                if(*indirect != 0)
+                {
+                    clr_bit(bitmap, *indirect-1);
+                    *indirect = 0;
+                    indirect++;
+                }
+                else
+                {
+                    clr_bit(bitmap, indblk-1);
+                    clr_bit(bitmap, dblindblk-1);
+                    put_block(dev,indblk,buff);
+                    put_block(dev,bmap,bitmap);
+                    put_block(dev,dblindblk,dblindbuff);
+                    mip->INODE.i_block[13] = 0;
+                    return;
+                }
+                clr_bit(bitmap, indblk-1);
+
+            }
+            doubleindirect++;
+            if (*doubleindirect == 0)
+            {
+                clr_bit(bitmap, indblk-1);
+                clr_bit(bitmap, dblindblk-1);
+                put_block(dev,indblk,buff);
+                put_block(dev,bmap,bitmap);
+                put_block(dev,dblindblk,dblindbuff);
+                mip->INODE.i_block[13] = 0;
+                return;
+            }
+        }
+    }
+    else
+    {
+        put_block(dev,bmap,bitmap);
+        return;
+    }
+
+}
 

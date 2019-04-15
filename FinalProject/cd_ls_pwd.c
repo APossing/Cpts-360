@@ -169,6 +169,7 @@ int ls_dir(MINODE *mip)
 
     for (int i = 0; i < 12; i++)
     {
+        printf("block: %d\n", mip->INODE.i_block[i]);
         if (mip->INODE.i_block[i] == 0)
             return 0;
         get_block(mip->dev, mip->INODE.i_block[i], buf);
@@ -250,6 +251,46 @@ void myQuit()
             iput(mip);
     }
     exit(0);
+}
+
+int isEmpty(MINODE *mip)
+{
+    int i;
+    char buf[BLKSIZE], namebuf[256], *cp;
+
+    // more than 2 links?
+    if(mip->INODE.i_links_count > 2)
+        return 0;
+
+    // only 2 links?
+    if(mip->INODE.i_links_count == 2)
+    {
+        // cycle through each direct block to check...
+        for(i = 0; i <= 11; i++)
+        {
+            if(mip->INODE.i_block[i])
+            {
+                get_block(mip->dev, mip->INODE.i_block[i], buf);
+                cp = buf;
+                dp = (DIR *)buf;
+
+                while(cp < &buf[BLKSIZE])
+                {
+                    strncpy(namebuf, dp->name, dp->name_len);
+                    namebuf[dp->name_len] = 0;
+
+                    // if stuff exists, this directory isn't empty :(
+                    if(strcmp(namebuf, ".") && strcmp(namebuf, ".."))
+                        return 0;
+
+                    cp+=dp->rec_len;
+                    dp=(DIR *)cp;
+                }
+            }
+        }
+        return 1;
+    }
+    return -1;
 }
 
 int enter_name(MINODE *pip, int myino, char *myname)
@@ -502,63 +543,50 @@ int my_link()
 {
     char * oldFile = strtok(pathname, " ");
     char * newLink = strtok(NULL, " ");
-    int oldDev = root->dev;
-    if (oldFile[0] != '/')
-        oldDev = running->cwd->dev;
-    dev = oldDev;
+
     int oldIno = getino(oldFile);
+
     if (!oldIno)
     {
         printf("Old File %s Does not exist!", oldFile);
         return -1;
     }
-
-
-    int newDev = root->dev;
-    if (newLink[0] != '/')
-        newDev = running->cwd->dev;
-    dev = newDev;
-    int new_ino = getino(newLink);
-    if (new_ino)
-    {
-        printf("Link %s Already exists!", newLink);
-        return -1;
-    }
-    MINODE *oldMip = iget(oldDev, oldIno);
+    MINODE *oldMip = iget(dev, oldIno);
 
     if (S_ISDIR(oldMip->INODE.i_mode)) {
         printf("%s is a directoy", oldFile);
         return -1;
     }
 
-    char parentDir[256], linkChild[256];
-    char temp[BLKSIZE];
-
-    strcpy(temp, newLink);
-    strcpy(parentDir, dirname(temp));
-
-    strcpy(temp, newLink);
-    strcpy(linkChild, basename(temp));
-
-    dev = newDev;
-    int parentIno = getino(parentDir);
-    if (parentIno==0)
+    int new_ino = getino(newLink);
+    if (new_ino)
     {
-        printf("%s directory does not exist", parentDir);
+        printf("Link %s Already exists!", newLink);
         return -1;
     }
 
-    MINODE * parentMip = iget(newDev, parentIno);
 
-    int result = enter_name(parentMip, oldMip->ino, linkChild);
+    char temp[BLKSIZE];
+
+    strcpy(temp, newLink);
+    char* parent = dirname(temp);
+
+    strcpy(temp, newLink);
+    char *child = basename(temp);
+
+    int pino = getino(parent);
+
+    MINODE * pmip = iget(dev, pino);
+
+    enter_name(pmip, oldMip->ino, child);
 
     oldMip->INODE.i_links_count++;
     oldMip->dirty = 1;
     printf("link count for %s is now %d\n", oldFile, oldMip->INODE.i_links_count);
 
     iput(oldMip);
-    iput(parentMip);
-    return result;
+    iput(pmip);
+    return 1;
 
 }
 
@@ -566,21 +594,12 @@ int my_symlink(){
     char * oldpath = strtok(pathname, " ");
     char * newpath = strtok(NULL, " ");
 
-
-    if(oldpath[0]==0 || newpath[0]==0){
-        printf("Syntax symlink [oldpath] [newpath]\n");
-        return -1;
-    }
-    if(oldpath[0]!='/'){
-        printf("Oldpath must be absolute path!\n");
-        return -1;
-    }
     char parentdir[64], name[64], *cp;
     DIR *dp;
     MINODE *pip, *targetip;
     int parent;
     cp = strrchr(newpath, '/');
-    if(cp == NULL){// not absolute path
+    if(cp == NULL){
         parent = running ->cwd->ino;
         strcpy(name, newpath);
     }else{
@@ -589,20 +608,15 @@ int my_symlink(){
         parent = getino(parentdir);
         strcpy(name, cp+1);
     }
-    int target = creat_file(newpath);
+    strcpy(pathname, newpath);
+    int target = creat_file();
     pip = iget(fd, parent);
     targetip = iget(fd, target);
     pip->dirty = 1;
-
-    pip->refCount++;
     pip->INODE.i_links_count++;
-    pip->INODE.i_atime = time(0);
 
     iput(pip);
 
-    targetip->dirty = 1;
-    targetip->refCount++;
-    targetip->INODE.i_links_count++;
     targetip->INODE.i_mode = 0xA1A4;
     targetip->INODE.i_size = strlen(oldpath);
     memcpy(targetip->INODE.i_block, oldpath, strlen(oldpath));
@@ -614,65 +628,40 @@ int my_symlink(){
 
 int my_unlink()
 {
-//    //check for user error
-//    if (pathname[0]=='\0'){
-//        printf("Syntax: unlink [path]\n");
-//        return -1;
-//    }
-//    char parentdir[64],name[64], *cp, *endcp,*last;
-//    DIR * dp;
-//    MINODE * pip,*targetip;
-//    int parent, target;
-//    cp = strrchr(pathname, '/');
-//    if (cp == NULL){
-//        parent = running->cwd->ino; // same dir
-//        strcpy(name,pathname);
-//    }
-//    else{
-//        //this
-//        *(cp) = '\0';
-//        strcpy(parentdir, pathname);
-//        parent = getino(parentdir);
-//        strcpy(name,cp+1);
-//    }
-//    target = getino(pathname);
-//    if ((target==0)||(parent==0)){
-//        printf("Error: File must exist\n");
-//        return -1;
-//    }
-//    pip = iget(fd,parent);
-//    targetip = iget(fd,target);
-//    //check to make sure its not a dir
-//    if((targetip->INODE.i_mode & 0100000) != 0100000){
-//        iput(pip);
-//        printf("Error: Cannot unlink NON-REG files\n");
-//        return -1;
-//    }
-//    //decrement the i links count by one
-//    targetip->INODE.i_links_count--;
-//    if (targetip->INODE.i_links_count == 0)
-//    {
-//        do_truncate(fd,targetip);
-//
-//        deallocateInodeDataBlocks(dev,mip);
-//        targetip->INODE.i_atime = targetip->INODE.i_mtime = time(0L);
-//        targetip->INODE.i_size = 0;
-//        targetip->dirty = 1;
-//
-//
-//        targetip->refCount++;
-//        targetip->dirty=1;
-//        iput(targetip);
-//        idealloc(fd,targetip->ino);
-//
-//    }
-//    else
-//    {
-//        iput(targetip);
-//    }
-//    //increment refcount?
-//
-//    return deleteChild(pip,name);
+
+    int ino = getino(pathname);
+    MINODE *mip = iget(dev, ino);
+
+    if((mip->INODE.i_mode & 0100000) != 0100000){
+        printf("Error: Cannot unlink NON-REG files\n");
+        return -1;
+    }
+    char temp[1024];
+    strcpy(temp,pathname);
+    char * parent = dirname(temp);
+    strcpy(temp,pathname);
+    char * child = basename(temp);
+    int pino = getino(parent);
+    MINODE * pmip = iget(dev, pino);
+    pmip->dirty = 1;
+    iput(pmip);
+    mip->INODE.i_links_count--;
+    if (mip->INODE.i_links_count > 0)
+    {
+        mip->dirty = 1;
+    }
+    else
+    {
+        if (!((mip->INODE.i_mode) & 0xA1FF) == 0xA1FF) {
+            deallocateInodeDataBlocks(dev, mip);
+        }
+        mip->INODE.i_atime = mip->INODE.i_mtime = time(0L);
+        mip->INODE.i_size = 0;
+        mip->dirty = 1;
+        idalloc(dev, mip->ino);
+    }
+    iput(mip);
+    rm_child(pmip, child);
 }
 
 
@@ -719,8 +708,79 @@ int my_stat()
 int my_touch()
 {
     int ino = getino(pathname);
+    if (ino == 0)
+    {
+        creat_file();
+    }
+    ino = getino(pathname);
     MINODE *mip = iget(fd, ino);
+
 
     mip->INODE.i_atime = mip->INODE.i_mtime = time(0L);
     iput(mip);
+}
+
+int my_chmod()
+{
+    char * filename = strtok(pathname, " ");
+    char * modeStr = strtok(NULL, " ");
+
+    int ino;
+    MINODE *mip;
+    ino = getino(filename);
+
+    if(!ino)
+        return 0;
+    mip = iget(dev, ino);
+    printf("previous Imode: %d", mip->INODE.i_mode);
+    // change its permissions accordingly to those the user desires
+    mip->INODE.i_mode = atoi(modeStr);
+    printf("new Imode: %d", mip->INODE.i_mode);
+
+    // mark dirty
+    mip->dirty = 1;
+
+    iput(mip); // cleanup
+    return 0;
+}
+
+void my_rmdir()
+{
+    int ino = getino(pathname);
+    MINODE *mip = iget(dev, ino);
+    if (!S_ISDIR(mip->INODE.i_mode)) {
+        printf("%s is not a directory", pathname);
+        return;
+    }
+    if (mip->refCount > 2)
+    {
+        printf("ref count is %d so it is not available\n", mip->refCount);
+        return;
+    }
+    if(!isEmpty(mip))
+    {
+        printf("DIR not very empty\n");
+        iput(mip);
+        return;
+    }
+
+    for (int i=0; i<12; i++){
+        if (mip->INODE.i_block[i]==0)
+            continue;
+        bdalloc(mip->dev, mip->INODE.i_block[i]);
+    }
+    idalloc(mip->dev, mip->ino);
+    iput(mip); //(which clears mip->refCount = 0);
+
+    int pino = find_ino(mip, &ino);
+    MINODE *pmip = iget(mip->dev, pino);
+
+    //findmyname(pmip, ino, pathname);
+    rm_child(pmip,pathname);
+    pmip->INODE.i_links_count--;
+    pmip->dirty = 1;
+    iput(pmip);
+
+
+
 }

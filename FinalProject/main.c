@@ -109,7 +109,7 @@ int main(int argc, char *argv[ ])
 
   //printf("hit a key to continue : "); getchar();
   while(1){
-    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch] ");
+    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch|chmod|rmdir] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
     if (line[0]==0)
@@ -117,7 +117,7 @@ int main(int argc, char *argv[ ])
     pathname[0] = 0;
     cmd[0] = 0;
     
-    sscanf(line, "%s %s", cmd, pathname);
+    sscanf(line, "%s %[^\n]", cmd, pathname);
     printf("cmd=%s pathname=%s\n", cmd, pathname);
 
     if (strcmp(cmd, "ls")==0)
@@ -135,13 +135,17 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "link")==0)
       my_link();
     if (strcmp(cmd, "unlink")==0)
-      my_link();
+      my_unlink();
     if (strcmp(cmd, "symlink")==0)
       my_symlink();
     if (strcmp(cmd, "stat")==0)
       my_stat();
     if (strcmp(cmd, "touch")==0)
       my_touch();
+    if (strcmp(cmd, "chmod")==0)
+      my_chmod();
+    if (strcmp(cmd, "rmdir")==0)
+      my_rmdir();
   }
 }
 
