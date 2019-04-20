@@ -639,7 +639,7 @@ int my_unlink()
     else
     {
         if (!((mip->INODE.i_mode) & 0xA1FF) == 0xA1FF) {
-            deallocateInodeDataBlocks(dev, mip);
+            deallocateInodeDataBlocks(mip);
         }
         mip->INODE.i_atime = mip->INODE.i_mtime = time(0L);
         mip->INODE.i_size = 0;
@@ -769,17 +769,6 @@ void my_rmdir()
 
 }
 
-int truncate(MINODE *mip)
-{
-
-    1. release mip->INODE's data blocks;
-    a file may have 12 direct blocks, 256 indirect blocks and 256*256
-    double indirect data blocks. release them all.
-    2. update INODE's time field
-
-    3. set INODE's size to 0 and mark Minode[ ] dirty
-}
-
 int my_open()
 {
     char * filename = strtok(pathname, " ");
@@ -810,6 +799,7 @@ int my_open()
     int ino = getino(filename);
     if (!ino)
     {
+        strcpy(pathname, filename);
         creat_file();
         ino = getino(filename);
     }
@@ -845,7 +835,7 @@ int my_open()
     switch(mode){
         case 0 : oftp->offset = 0;     // R: offset = 0
             break;
-        case 1 : truncate(mip,);        // W: truncate file to 0 size
+        case 1 : my_truncate(mip);        // W: truncate file to 0 size
             oftp->offset = 0;
             break;
         case 2 : oftp->offset = 0;     // RW: do NOT truncate file
@@ -865,7 +855,7 @@ int my_open()
 
 int close_file(int fd)
 {
-    if(fd < 1)
+    if(fd < 0)
     {
         printf("fd is invalid: %d",fd);
         return -1;
@@ -879,6 +869,84 @@ int close_file(int fd)
     return 0;
 }
 
+
+int myread(int fd, char buf[ ], int nbytes)
+{
+    OFT* oftp = running->fd[fd];
+    MINODE* mip = oftp->mptr;
+    int filesize = mip->INODE.i_size;
+    int count = 0;
+    char kbuf[BLKSIZE], dbuf[BLKSIZE];
+    // number of bytes read
+    int offset = oftp->offset;
+    // byte offset in file to READ
+    //compute bytes available in file: avil = fileSize – offset;
+    int avil = filesize- offset;
+    while (nbytes && avil){
+        int lblk = offset/BLKSIZE;
+        int blk;
+        int start = offset % BLKSIZE;
+        if (lblk < 12) //ezzzzz
+        {
+            blk = mip->INODE.i_block[lblk];
+        }
+        else if ((lblk >=12) &&(lblk<256+12)) //indirect
+        {
+            get_block(mip->dev, mip->INODE.i_block[12], kbuf);
+            blk = kbuf[lblk-12];
+        }
+        else // double indirect
+        {
+            get_block(mip->dev, mip->INODE.i_block[13], kbuf);
+            blk = kbuf[(lblk - (BLKSIZE / sizeof(int)) - 12) % (BLKSIZE / sizeof(int))];
+            get_block(mip->dev, blk, dbuf);
+            blk = dbuf[(lblk - (BLKSIZE / sizeof(int)) - 12) % (BLKSIZE / sizeof(int))];
+        }
+        get_block(mip->dev, blk, kbuf);
+        char *cp = kbuf + start;
+        int remain = BLKSIZE - start;
+        while (remain){
+            // copy bytes from kbuf[ ] to buf[ ]
+            *buf++ = *cp++;
+            offset++; count++;
+            // inc offset, count;
+            remain--; avil--; nbytes--; // dec remain, avail, nbytes;
+            if (nbytes==0 || avil==0)
+                break;
+        } // end of while(remain)
+    }
+    return count;
+}
+
+int read_file()
+{
+    /*
+    Preparations:
+    ASSUME: file is opened for RD or RW;
+    ask for a fd  and  nbytes to read;
+    verify that fd is indeed opened for RD or RW;
+    return(myread(fd, buf, nbytes));*/
+    char * fdStr = strtok(pathname, " ");
+    char * bytesStr = strtok(NULL, " ");
+    int fd = atoi(fdStr);
+    int bytes = atoi(bytesStr);
+    if (running->fd[fd] == NULL)
+    {
+        return -1;
+    }
+    if ((running->fd[fd]->mode!=0)&&(running->fd[fd]->mode!=2))
+    {
+        return -1;
+    }
+    char buf[BLKSIZE];
+    return myread(fd, buf, bytes);
+
+
+
+
+
+}
+
 int cat()
 {
     int i;
@@ -890,21 +958,66 @@ int cat()
 
     }
     pathname[i] = ' ';
-    pathname[i+1] = '0';
+    pathname[i+1] = 'R';
     pathname[i+2] = 0;
     int fd = my_open();
-    while( n = read(fd, mybuf[1024], 1024)){
+    printf("=================================\n");
+    while( n = myread(fd, mybuf[1024], 1024)){
         mybuf[n] = 0;             // as a null terminated string
         printf("%s", mybuf); //   <=== THIS works but not good
     }
     close_file(fd);
+    printf("\n=================================");
+
 
 }
 
 
-int my_lseek(int fd, int position)
+int my_lseek(int fd, int position) {
+    fd = my_open();
+    if (running->fd[fd] == NULL) {
+        return -1;
+    }
+    if (position <= running->fd[fd]->mptr->INODE.i_size) {
+        int temp = running->fd[fd]->offset;
+        running->fd[fd]->offset = position;
+        return temp;
+
+    } else {
+        return -1;
+    }
+}
+
+int pfd()
 {
-    //int fd = my_open();
-return 1;
+    int i;
+    printf("Filename\tFD\tmode\toffset\n");
+    printf("--------\t--\t----\t------\n");
+    for(i = 0;i<NFD;i++)
+    {
+        if (running->fd[i]!= NULL)
+        {
+            switch(running->fd[i]->mode)
+            {
+                case 0:
+                    printf("READ\t");
+                    break;
+                case 1:
+                    printf("WRITE\t");
+                    break;
+                case 2:
+                    printf("R/W\t");
+                    break;
+                case 3:
+                    printf("APPEND\t");
+                    break;
+                default:
+                    printf("-------\t");//this should never happen
+                    break;
+            }
+            printf("\t %6d\t %6d\t %5d\n",running->fd[i]->offset, running->fd[i]->mptr->dev, running->fd[i]->mptr->ino);
+        }
+    }
+    return 0;
 }
 

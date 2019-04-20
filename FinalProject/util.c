@@ -68,10 +68,7 @@ MINODE *iget(int dev, int ino)
   printf("PANIC: no more free minodes\n");
   return 0;
 }
-void truncate(MINODE *mip)
-{
 
-}
 void decFreeBlocks(int dev)
 {
     char buf[BLKSIZE];
@@ -368,7 +365,7 @@ void rm_child(MINODE *pmip, char *name)
     }
 }
 
-void deallocateInodeDataBlocks(int dev, MINODE* mip)
+void deallocateInodeDataBlocks(MINODE* mip)
 {
     char bitmap[1024],dblindbuff[1024], buff[BLKSIZE];
     int i = 0;
@@ -467,5 +464,13 @@ void deallocateInodeDataBlocks(int dev, MINODE* mip)
         return;
     }
 
+}
+
+void my_truncate(MINODE *mip)
+{
+    deallocateInodeDataBlocks(mip);
+    mip->INODE.i_atime = mip->INODE.i_mtime = time(0L);
+    mip->INODE.i_size = 0;
+    mip->dirty = 1;
 }
 

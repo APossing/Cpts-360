@@ -109,7 +109,7 @@ int main(int argc, char *argv[ ])
 
   //printf("hit a key to continue : "); getchar();
   while(1){
-    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch|chmod|rmdir] ");
+    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch|chmod|rmdir|open|cat|read] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
     if (line[0]==0)
@@ -147,9 +147,11 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "rmdir")==0)
       my_rmdir();
     if (strcmp(cmd, "open")==0)
-      my_rmdir();
+      my_open();
     if (strcmp(cmd, "cat")==0)
       cat();
+    if (strcmp(cmd, "read")==0)
+      read_file();
   }
 }
 
