@@ -14,8 +14,10 @@
     <list default="true" id="8f155388-9c39-49b1-a47b-ca71dbfd9c47" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cd_ls_pwd.c" beforeDir="false" afterPath="$PROJECT_DIR$/cd_ls_pwd.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/untitled3.dir/main.c.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/untitled3.dir/main.c.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/untitled3.dir/main.c.o" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/createDisk.sh" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/createDisk.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/disk" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/disk" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/mydisk" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/mydisk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/untitled3" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/untitled3" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/main.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/util.c" beforeDir="false" afterPath="$PROJECT_DIR$/util.c" afterDir="false" />
@@ -36,29 +38,30 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="604">
-              <caret line="113" column="29" selection-start-line="113" selection-start-column="29" selection-end-line="113" selection-end-column="29" />
+            <state relative-caret-position="261">
+              <caret line="122" column="11" selection-start-line="122" selection-start-column="11" selection-end-line="122" selection-end-column="11" />
               <folding>
                 <element signature="e#235#253#0" expanded="true" />
+                <element signature="e#782#799#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cd_ls_pwd.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1583">
-              <caret line="713" lean-forward="true" selection-start-line="713" selection-end-line="713" />
+            <state relative-caret-position="171">
+              <caret line="773" selection-start-line="773" selection-end-line="773" />
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/util.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="509">
-              <caret line="239" column="31" selection-start-line="239" selection-start-column="31" selection-end-line="239" selection-end-column="31" />
+            <state relative-caret-position="315">
+              <caret line="72" column="4" selection-start-line="72" selection-start-column="4" selection-end-line="72" selection-end-column="4" />
             </state>
           </provider>
         </entry>
@@ -66,8 +69,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/type.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="22" selection-start-line="22" selection-end-line="22" />
+            <state relative-caret-position="466">
+              <caret line="48" column="6" lean-forward="true" selection-start-line="48" selection-start-column="6" selection-end-line="48" selection-end-column="6" />
             </state>
           </provider>
         </entry>
@@ -85,13 +88,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>cd_ls</find>
-      <find>find_ino</find>
-      <find>basename</find>
-      <find>getino</find>
-      <find>alloc</find>
-      <find>iget</find>
-      <find>dev</find>
       <find>name</find>
       <find>running</find>
       <find>mkdir</find>
@@ -99,6 +95,29 @@
       <find>quit</find>
       <find>newFile</find>
       <find>tokenize</find>
+      <find>ls</find>
+      <find>enter</find>
+      <find>rm_ch</find>
+      <find>enter_name</find>
+      <find>creat_file</find>
+      <find>1024</find>
+      <find>search</find>
+      <find>mtable</find>
+      <find>creat</find>
+      <find>findino</find>
+      <find>ino</find>
+      <find>pwd</find>
+      <find>find_ino</find>
+      <find>get_block</find>
+      <find>my_touch</find>
+      <find>unlink</find>
+      <find>deallocateInodeDataBlocks</find>
+      <find>/*{{{*/</find>
+      <find>/*}}}*/</find>
+      <find>lstat</find>
+      <find>getino</find>
+      <find>lseek</find>
+      <find>truncate</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -108,9 +127,9 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/type.h" />
-        <option value="$PROJECT_DIR$/util.c" />
         <option value="$PROJECT_DIR$/main.c" />
         <option value="$PROJECT_DIR$/cd_ls_pwd.c" />
+        <option value="$PROJECT_DIR$/util.c" />
       </list>
     </option>
   </component>
@@ -178,11 +197,16 @@
       <workItem from="1554572460649" duration="6171000" />
       <workItem from="1554687412570" duration="3730000" />
       <workItem from="1555015047359" duration="5307000" />
+      <workItem from="1555300846539" duration="18327000" />
+      <workItem from="1555345203825" duration="516000" />
+      <workItem from="1555473171749" duration="1889000" />
+      <workItem from="1555532468408" duration="446000" />
+      <workItem from="1555654155981" duration="4276000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="19398000" />
+    <option name="totallyTimeSpent" value="44852000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="134" y="81" width="3106" height="2079" extended-state="6" />
@@ -194,15 +218,15 @@
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.050251257" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.14102565" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.23561431" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
-      <window_info anchor="bottom" id="Messages" order="8" weight="0.32970452" />
-      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32998326" />
+      <window_info active="true" anchor="bottom" id="Messages" order="8" visible="true" weight="0.21538462" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32970452" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Version Control" order="11" weight="0.32998326" />
+      <window_info anchor="bottom" id="Version Control" order="11" weight="0.32970452" />
       <window_info anchor="bottom" id="CMake" order="12" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -210,21 +234,21 @@
       <window_info anchor="right" id="Database" order="3" />
     </layout>
     <layout-to-restore>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49916247" visible="true" weight="0.26399672" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49916247" weight="0.26399672" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" sideWeight="0.5008375" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.050251257" />
-      <window_info active="true" anchor="bottom" id="Debug" order="3" visible="true" weight="0.21384615" />
+      <window_info active="true" anchor="bottom" id="Debug" order="3" visible="true" weight="0.63063765" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Messages" order="8" weight="0.32970452" />
-      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32998326" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32970452" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Version Control" order="11" weight="0.32998326" />
+      <window_info anchor="bottom" id="Version Control" order="11" weight="0.32970452" />
       <window_info anchor="bottom" id="CMake" order="12" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -236,13 +260,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/type.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="22" selection-start-line="22" selection-end-line="22" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/cmake-build-debug/Makefile">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1740">
@@ -250,27 +267,35 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/util.c">
+    <entry file="file://$PROJECT_DIR$/main.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="509">
-          <caret line="239" column="31" selection-start-line="239" selection-start-column="31" selection-end-line="239" selection-end-column="31" />
+        <state relative-caret-position="261">
+          <caret line="122" column="11" selection-start-line="122" selection-start-column="11" selection-end-line="122" selection-end-column="11" />
+          <folding>
+            <element signature="e#235#253#0" expanded="true" />
+            <element signature="e#782#799#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.c">
+    <entry file="file://$PROJECT_DIR$/type.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="604">
-          <caret line="113" column="29" selection-start-line="113" selection-start-column="29" selection-end-line="113" selection-end-column="29" />
-          <folding>
-            <element signature="e#235#253#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="466">
+          <caret line="48" column="6" lean-forward="true" selection-start-line="48" selection-start-column="6" selection-end-line="48" selection-end-column="6" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/cd_ls_pwd.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1583">
-          <caret line="713" lean-forward="true" selection-start-line="713" selection-end-line="713" />
+        <state relative-caret-position="171">
+          <caret line="773" selection-start-line="773" selection-end-line="773" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/util.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="315">
+          <caret line="72" column="4" selection-start-line="72" selection-start-column="4" selection-end-line="72" selection-end-column="4" />
         </state>
       </provider>
     </entry>
