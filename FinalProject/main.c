@@ -146,6 +146,10 @@ int main(int argc, char *argv[ ])
       my_chmod();
     if (strcmp(cmd, "rmdir")==0)
       my_rmdir();
+    if (strcmp(cmd, "open")==0)
+      my_rmdir();
+    if (strcmp(cmd, "cat")==0)
+      cat();
   }
 }
 

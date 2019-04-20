@@ -113,36 +113,22 @@ int findmyname(MINODE *parent, u32 myino, char *myname)
 
 int ls_file(MINODE *mip, char *name)
 {
+    char *t1 = "xwrxwrxwr-------";
+    char *t2 = "----------------";
     u16 mode, mask;
     mode = mip->INODE.i_mode;
-    if (S_ISDIR(mode))
-        putchar('d');
-    else if (S_ISLNK(mode))
-        putchar('1');
-    else
-        putchar('-');
-
-    mask = 000400;
-
-    for (int i = 0; i < 3; i++)
-    {
-        if (mode & mask)
-            putchar('r');
+    if ((mode & 0xF000) == 0x8000) // if (S_ISREG())
+        printf("%c",'-');
+    if ((mode & 0xF000) == 0x4000) // if (S_ISDIR())
+        printf("%c",'d');
+    if ((mode & 0xF000) == 0xA000) // if (S_ISLNK())
+        printf("%c",'l');
+    for (int i=8; i >= 0; i--){
+        if (mode & (1 << i)) // print r|w|x
+            printf("%c", t1[i]);
         else
-            putchar('-');
-        mask = mask >> 1;
-
-        if (mode & mask)
-            putchar('w');
-        else
-            putchar('-');
-        mask = mask >> 1;
-
-        if (mode & mask)
-            putchar('w');
-        else
-            putchar('-');
-        mask = mask >> 1;
+            printf("%c", t2[i]);
+// or print -
     }
     printf("%4d", mip->INODE.i_links_count);
     printf("%4d", mip->INODE.i_uid);
@@ -457,7 +443,7 @@ int mk_dir()
     }
     mymkdir(pip, child);
     pip->INODE.i_links_count++;
-    pip->INODE.i_atime=time(0L);
+    pip->INODE.i_atime = pip->INODE.i_ctime = pip->INODE.i_mtime = time(0L);
     pip->dirty = 1;
 
     iput(pip);
@@ -724,7 +710,7 @@ int my_chmod()
 {
     char * filename = strtok(pathname, " ");
     char * modeStr = strtok(NULL, " ");
-
+    int mode = atoi(modeStr);
     int ino;
     MINODE *mip;
     ino = getino(filename);
@@ -734,7 +720,7 @@ int my_chmod()
     mip = iget(dev, ino);
     printf("previous Imode: %d", mip->INODE.i_mode);
     // change its permissions accordingly to those the user desires
-    mip->INODE.i_mode = atoi(modeStr);
+    mip->INODE.i_mode = mode;
     printf("new Imode: %d", mip->INODE.i_mode);
 
     // mark dirty
@@ -781,6 +767,144 @@ void my_rmdir()
     pmip->dirty = 1;
     iput(pmip);
 
+}
 
+int truncate(MINODE *mip)
+{
+
+    1. release mip->INODE's data blocks;
+    a file may have 12 direct blocks, 256 indirect blocks and 256*256
+    double indirect data blocks. release them all.
+    2. update INODE's time field
+
+    3. set INODE's size to 0 and mark Minode[ ] dirty
+}
+
+int my_open()
+{
+    char * filename = strtok(pathname, " ");
+    char * modeStr = strtok(NULL, " ");
+
+    int mode;
+    if (strcmp(modeStr,"R") == 0)
+    {
+        mode = 0;
+    }
+    else if (strcmp(modeStr,"W") == 0)
+    {
+        mode = 1;
+    }
+    else if (strcmp(modeStr,"RW") == 0)
+    {
+        mode = 2;
+    }
+    else if (strcmp(modeStr,"APPEND") == 0)
+    {
+        mode = 3;
+    }
+    else
+    {
+        printf("open: not proper mode: %s\n", modeStr);
+    }
+
+    int ino = getino(filename);
+    if (!ino)
+    {
+        creat_file();
+        ino = getino(filename);
+    }
+    MINODE* mip = iget(dev, ino);
+
+    if((mip->INODE.i_mode & 0100000) != 0100000){
+        printf("Error: Cannot open non-regular files\n");
+        return -1;
+    }
+    int lowFd;
+    for(int i = 0; i <NFD; i++)
+    {
+        if (running->fd[i] == NULL)
+        {
+            lowFd = i;
+            break;
+        }
+
+        if (running->fd[i]->mptr == mip)
+        {
+            if (mode > 0)
+            {
+                printf("open with incompatable mode: %s\n",filename);
+                return -1;
+            }
+        }
+    }
+    OFT *oftp;
+    oftp->mode = mode;      // mode = 0|1|2|3 for R|W|RW|APPEND
+    oftp->refCount = 1;
+    oftp->mptr = mip;  // point at the file's minode[]
+
+    switch(mode){
+        case 0 : oftp->offset = 0;     // R: offset = 0
+            break;
+        case 1 : truncate(mip,);        // W: truncate file to 0 size
+            oftp->offset = 0;
+            break;
+        case 2 : oftp->offset = 0;     // RW: do NOT truncate file
+            break;
+        case 3 : oftp->offset =  mip->INODE.i_size;  // APPEND mode
+            break;
+        default: printf("invalid mode\n");
+            return -1;
+    }
+    running->fd[lowFd] = oftp;
+    mip->INODE.i_atime = time(NULL);
+    mip->dirty = 1;
+    iput(mip);
+
+    return lowFd;
+}
+
+int close_file(int fd)
+{
+    if(fd < 1)
+    {
+        printf("fd is invalid: %d",fd);
+        return -1;
+    }
+    OFT *oftp = running->fd[fd];
+    running->fd[fd] = NULL;
+    oftp->refCount--;
+    if(oftp->refCount>0) return 0;
+    MINODE* mip = oftp->mptr;
+    iput(mip);
+    return 0;
+}
+
+int cat()
+{
+    int i;
+    char mybuf[1024], dummy = 0;  // a null char at end of mybuf[ ]
+    int n;
+
+    for (i = 0; pathname[i] != 0;i++)
+    {
+
+    }
+    pathname[i] = ' ';
+    pathname[i+1] = '0';
+    pathname[i+2] = 0;
+    int fd = my_open();
+    while( n = read(fd, mybuf[1024], 1024)){
+        mybuf[n] = 0;             // as a null terminated string
+        printf("%s", mybuf); //   <=== THIS works but not good
+    }
+    close_file(fd);
 
 }
+
+
+int my_lseek(int fd, int position)
+{
+    //int fd = my_open();
+return 1;
+}
+

@@ -68,7 +68,10 @@ MINODE *iget(int dev, int ino)
   printf("PANIC: no more free minodes\n");
   return 0;
 }
+void truncate(MINODE *mip)
+{
 
+}
 void decFreeBlocks(int dev)
 {
     char buf[BLKSIZE];
