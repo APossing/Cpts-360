@@ -480,11 +480,11 @@ int my_creat(MINODE *pip, char *name)
 }
 
 
-int creat_file()
+int creat_file(char *filename)
 {
     MINODE *mip;
     int dev;
-    if (pathname[0] == '/') {
+    if (filename[0] == '/') {
         mip = root;
     }
     else
@@ -497,10 +497,10 @@ int creat_file()
     char parent[BLKSIZE];
     char child[BLKSIZE];
 
-    strcpy(temp, pathname);
+    strcpy(temp, filename);
     strcpy(parent, dirname(temp));
 
-    strcpy(temp, pathname);
+    strcpy(temp, filename);
     strcpy(child, basename(temp));
 
     int pino = getino(parent);
@@ -511,7 +511,7 @@ int creat_file()
         printf("error: not a directory\n");
         return 0;
     }
-    if (getino(pathname) != 0)
+    if (getino(filename) != 0)
     {
         printf("file already exists!\n");
         return 0;
@@ -523,6 +523,11 @@ int creat_file()
 
     iput(pip);
     return 1;
+}
+
+create_fileProxy()
+{
+    return creat_file(pathname);
 }
 
 int my_link()
@@ -594,8 +599,7 @@ int my_symlink(){
         parent = getino(parentdir);
         strcpy(name, cp+1);
     }
-    strcpy(pathname, newpath);
-    int target = creat_file();
+    int target = creat_file(newpath);
     pip = iget(fd, parent);
     targetip = iget(fd, target);
     pip->dirty = 1;
@@ -612,21 +616,22 @@ int my_symlink(){
 }
 
 
-int my_unlink()
+int my_unlink(char* path)
 {
+    char temp[1024];
+    strcpy(temp,path);
+    char * parent = dirname(temp);
+    strcpy(temp,path);
+    char * child = basename(temp);
 
-    int ino = getino(pathname);
+    int ino = getino(path);
     MINODE *mip = iget(dev, ino);
 
     if((mip->INODE.i_mode & 0100000) != 0100000){
         printf("Error: Cannot unlink NON-REG files\n");
         return -1;
     }
-    char temp[1024];
-    strcpy(temp,pathname);
-    char * parent = dirname(temp);
-    strcpy(temp,pathname);
-    char * child = basename(temp);
+
     int pino = getino(parent);
     MINODE * pmip = iget(dev, pino);
     pmip->dirty = 1;
@@ -650,6 +655,10 @@ int my_unlink()
     rm_child(pmip, child);
 }
 
+int my_unlinkProxy()
+{
+    return my_unlink(pathname);
+}
 
 int my_stat()
 {
@@ -671,14 +680,14 @@ int my_stat()
     memcpy(&myStat->st_ctime, &mip->INODE.i_ctime, sizeof(time_t));
     printf("dev: %d\t", (int)myStat->st_dev);
     printf("ino: %u\t\t", (int)myStat->st_ino);
-    printf("mode: %u\t", (unsigned short)myStat->st_mode);
-    printf("nlink: %lu\t", (unsigned long)myStat->st_nlink);
+    printf("mode: %u\t", (int)myStat->st_mode);
+    printf("nlink: %lu\t", (int)myStat->st_nlink);
     printf("uid: %u\t", (int)myStat->st_uid);
     printf("\n");
     printf("gid: %u\t", (int)myStat->st_gid);
     printf("size: %d\t", (int)myStat->st_size);
     printf("blksize: %d\t", (int)myStat->st_blksize);
-    printf("blocks: %lu\t", (unsigned long)myStat->st_blocks);
+    printf("blocks: %lu\t", (int)myStat->st_blocks);
     char *time_string = ctime(&myStat->st_ctime);
     printf("\nctime: %s", time_string);
     time_string = ctime(&myStat->st_atime);
@@ -696,7 +705,7 @@ int my_touch()
     int ino = getino(pathname);
     if (ino == 0)
     {
-        creat_file();
+        creat_file(pathname);
     }
     ino = getino(pathname);
     MINODE *mip = iget(fd, ino);
@@ -769,10 +778,11 @@ void my_rmdir()
 
 }
 
-int my_open()
+
+
+
+int my_open(char*filename, char*modeStr)
 {
-    char * filename = strtok(pathname, " ");
-    char * modeStr = strtok(NULL, " ");
 
     int mode;
     if (strcmp(modeStr,"R") == 0)
@@ -799,8 +809,7 @@ int my_open()
     int ino = getino(filename);
     if (!ino)
     {
-        strcpy(pathname, filename);
-        creat_file();
+        creat_file(filename);
         ino = getino(filename);
     }
     MINODE* mip = iget(dev, ino);
@@ -827,7 +836,8 @@ int my_open()
             }
         }
     }
-    OFT *oftp;
+    printf("fd of %s = %d\n",filename, lowFd);
+    OFT *oftp = (OFT *)malloc(sizeof(OFT));
     oftp->mode = mode;      // mode = 0|1|2|3 for R|W|RW|APPEND
     oftp->refCount = 1;
     oftp->mptr = mip;  // point at the file's minode[]
@@ -853,6 +863,16 @@ int my_open()
     return lowFd;
 }
 
+int proxyMyOpen()
+{
+    char * filename = strtok(pathname, " ");
+    char * modeStr = strtok(NULL, " ");
+    if (modeStr == 0)
+        modeStr = "R";
+
+    return my_open(filename, modeStr);
+}
+
 int close_file(int fd)
 {
     if(fd < 0)
@@ -869,6 +889,10 @@ int close_file(int fd)
     return 0;
 }
 
+int closeProxy()
+{
+    return close_file(atoi(pathname));
+}
 
 int myread(int fd, char buf[ ], int nbytes)
 {
@@ -877,25 +901,24 @@ int myread(int fd, char buf[ ], int nbytes)
     int filesize = mip->INODE.i_size;
     int count = 0;
     char kbuf[BLKSIZE], dbuf[BLKSIZE];
+    char*cq = buf;
     // number of bytes read
     int offset = oftp->offset;
     // byte offset in file to READ
     //compute bytes available in file: avil = fileSize – offset;
     int avil = filesize- offset;
-    while (nbytes && avil){
-        int lblk = offset/BLKSIZE;
+    while (nbytes && avil) {
+        int lblk = offset / BLKSIZE;
         int blk;
         int start = offset % BLKSIZE;
         if (lblk < 12) //ezzzzz
         {
             blk = mip->INODE.i_block[lblk];
-        }
-        else if ((lblk >=12) &&(lblk<256+12)) //indirect
+        } else if ((lblk >= 12) && (lblk < 256 + 12)) //indirect
         {
             get_block(mip->dev, mip->INODE.i_block[12], kbuf);
-            blk = kbuf[lblk-12];
-        }
-        else // double indirect
+            blk = kbuf[lblk - 12];
+        } else // double indirect
         {
             get_block(mip->dev, mip->INODE.i_block[13], kbuf);
             blk = kbuf[(lblk - (BLKSIZE / sizeof(int)) - 12) % (BLKSIZE / sizeof(int))];
@@ -905,16 +928,28 @@ int myread(int fd, char buf[ ], int nbytes)
         get_block(mip->dev, blk, kbuf);
         char *cp = kbuf + start;
         int remain = BLKSIZE - start;
-        while (remain){
-            // copy bytes from kbuf[ ] to buf[ ]
-            *buf++ = *cp++;
-            offset++; count++;
-            // inc offset, count;
-            remain--; avil--; nbytes--; // dec remain, avail, nbytes;
-            if (nbytes==0 || avil==0)
-                break;
-        } // end of while(remain)
+
+        if (nbytes <= remain) {
+            memcpy(cq, cp, nbytes);
+            count += nbytes;
+            oftp->offset += nbytes;
+            avil -= nbytes;
+            remain -= nbytes;
+            cq += nbytes;
+            cp += nbytes;
+            nbytes = 0;
+        } else {
+            memcpy(cq, cp, remain);
+            count += remain;
+            oftp->offset += remain;
+            avil -= remain;
+            nbytes -= remain;
+            cq += remain;
+            cp += remain;
+            remain = 0;
+        }
     }
+    printf("read %d char into file descriptor fd=%d\n", count, fd);
     return count;
 }
 
@@ -953,14 +988,7 @@ int cat()
     char mybuf[1024], dummy = 0;  // a null char at end of mybuf[ ]
     int n;
 
-    for (i = 0; pathname[i] != 0;i++)
-    {
-
-    }
-    pathname[i] = ' ';
-    pathname[i+1] = 'R';
-    pathname[i+2] = 0;
-    int fd = my_open();
+    int fd = my_open(pathname, "R");
     printf("=================================\n");
     while( n = myread(fd, mybuf[1024], 1024)){
         mybuf[n] = 0;             // as a null terminated string
@@ -974,7 +1002,7 @@ int cat()
 
 
 int my_lseek(int fd, int position) {
-    fd = my_open();
+    fd = my_open(pathname, "R");
     if (running->fd[fd] == NULL) {
         return -1;
     }
@@ -988,15 +1016,23 @@ int my_lseek(int fd, int position) {
     }
 }
 
+int lseekProxy()
+{
+    char * fd = strtok(pathname, " ");
+    char * position = strtok(NULL, " ");
+
+    return my_lseek(atoi(fd), atoi(position));
+}
 int pfd()
 {
     int i;
-    printf("Filename\tFD\tmode\toffset\n");
-    printf("--------\t--\t----\t------\n");
+    printf("fd\tmode\toffset\tINODE\n");
+    printf("--\t----\t------\t-----\n");
     for(i = 0;i<NFD;i++)
     {
         if (running->fd[i]!= NULL)
         {
+            printf("%d\t", i);
             switch(running->fd[i]->mode)
             {
                 case 0:
@@ -1015,9 +1051,192 @@ int pfd()
                     printf("-------\t");//this should never happen
                     break;
             }
-            printf("\t %6d\t %6d\t %5d\n",running->fd[i]->offset, running->fd[i]->mptr->dev, running->fd[i]->mptr->ino);
+            printf("%d\t\t[%d,%d]\n",running->fd[i]->offset, running->fd[i]->mptr->dev, running->fd[i]->mptr->ino);
         }
     }
     return 0;
 }
+
+int mywrite(int fd, char *buf, int nbytes) {
+    OFT *oftp = running->fd[fd];
+    MINODE *mip = oftp->mptr;
+    int filesize = mip->INODE.i_size;
+    int count = 0;
+    int blk;
+    char *cq = buf;
+    char kbuf[BLKSIZE], dbuf[BLKSIZE];
+    // number of bytes read
+    int offset = oftp->offset;
+    while (nbytes > 0) {
+        int lbk = oftp->offset / BLKSIZE;
+        int startByte = oftp->offset % BLKSIZE;
+        if (lbk < 12) {                         // direct block
+            if (mip->INODE.i_block[lbk] == 0) {   // if no data block yet
+
+                mip->INODE.i_block[lbk] = balloc(mip->dev);// MUST ALLOCATE a block
+                blk = mip->INODE.i_block[lbk];      // blk should be a disk block now
+            }
+
+        } else if (lbk >= 12 && lbk < 256 + 12) { // INDIRECT blocks
+            // HELP INFO:
+            if (mip->INODE.i_block[12] == 0) {
+                mip->INODE.i_block[12] = balloc(mip->dev);// MUST ALLOCATE a block
+                get_block(mip->dev, mip->INODE.i_block[12], dbuf);
+                int *ip = (int *) buf;
+                for (int j = 0; j < BLKSIZE / sizeof(int); j++) {
+                    ip[j] = 0;
+                }
+                put_block(mip->dev, mip->INODE.i_block[12], dbuf);
+                mip->INODE.i_blocks++;
+            }
+            int int_buf[BLKSIZE / sizeof(int)];
+            get_block(mip->dev, mip->INODE.i_block[12], (char *) int_buf);
+            blk = int_buf[lbk - 12];
+            if (blk == 0) {
+                blk = int_buf[blk] = balloc(mip->dev);
+                mip->INODE.i_blocks++;
+            }
+            put_block(mip->dev, mip->INODE.i_block[12], (char *) int_buf);
+        } else //Double indirect!!
+        {
+            if (mip->INODE.i_block[13] == 0) {
+                mip->INODE.i_block[13] = balloc(mip->dev);
+                get_block(mip->dev, mip->INODE.i_block[13], dbuf);
+                int *ip = (int *) dbuf;
+                for (int j = 0; j < BLKSIZE / sizeof(int); j++) {
+                    ip[j] = 0;
+                }
+                put_block(mip->dev, mip->INODE.i_block[13], dbuf);
+                mip->INODE.i_blocks++;
+            }
+            int dibuf[BLKSIZE / sizeof(int)];
+            get_block(mip->dev, mip->INODE.i_block[13], (char *) dibuf);
+            lbk = lbk - (BLKSIZE / sizeof(int)) - 12; //because of 12 offset and int arr
+            blk = dibuf[lbk / (BLKSIZE / sizeof(int))];
+            if (blk == 0) //first entry??
+            {
+                blk = dibuf[blk] = balloc(mip->dev);
+                get_block(mip->dev, blk, dbuf);
+                int *ip = (int *) dbuf;
+                for (int j = 0; j < BLKSIZE / sizeof(int); j++) {
+                    ip[j] = 0;
+                }
+                put_block(mip->dev, blk, dbuf);
+                mip->INODE.i_blocks++;
+            }
+            put_block(mip->dev, mip->INODE.i_block[13], (char *) dibuf);
+            memset(dibuf, 0, BLKSIZE / sizeof(int));
+            get_block(mip->dev, blk, (char *) dibuf);
+            blk = dibuf[lbk % (BLKSIZE / sizeof(int))];
+            if (blk == 0) {
+                blk = dibuf[blk] = balloc(mip->dev);
+                mip->INODE.i_blocks++;
+            }
+            put_block(mip->dev, blk, (char *) dibuf);
+
+        }
+        char wbuf[BLKSIZE];
+        /* all cases come to here : write to the data block */
+        get_block(mip->dev, blk, wbuf);   // read disk block into wbuf[ ]
+        char *cp = wbuf + startByte;      // cp points at startByte in wbuf[]
+        int remain = BLKSIZE - startByte;     // number of BYTEs remain in this block
+        int amountWrite = (remain <= nbytes) ? remain : nbytes;
+        memcpy(cp, cq, amountWrite);
+        cp = cq = cp + amountWrite;
+        oftp->offset += amountWrite;
+        if (oftp->offset > mip->INODE.i_size)
+            mip->INODE.i_size = oftp->offset;
+        nbytes -= amountWrite;
+        put_block(mip->dev, blk, wbuf);   // write wbuf[ ] to disk
+
+        // loop back to outer while to write more .... until nbytes are written
+    }
+
+    mip->dirty = 1;       // mark mip dirty for iput()
+    printf("wrote %d char into file descriptor fd=%d\n", strlen(buf), fd);
+    return nbytes;
+}
+int write_file() {
+    char *pfd = strtok(pathname, " ");
+
+    int writefd = pfd[0] - 48;
+    if (writefd<0||writefd>9) {
+        return -1;
+    }
+    char string[1024];
+    printf("Enter the string you want to write: ");
+    fgets(string, 1024, stdin);
+    string[strlen(string)-1]=0;
+
+    //	strncpy(string, pstring, strlen(pstring));
+    //	string[strlen(pstring)]=0;
+    //	memcpy(string, pstring, strlen(pstring));
+    if(running->fd[writefd]->mode == 0){
+        printf("error: fd not open for write\n");
+        return -1;
+    }
+    int nbytes = strlen(string);
+    return(mywrite(writefd, string, nbytes));
+}
+
+
+
+int cp(char * source, char* dest)
+{
+
+    int fd = my_open(source, "R");
+    int gd = my_open(dest, "RW");
+    char buf[BLKSIZE];
+    int n = 0;
+    while (n = myread(fd, buf, BLKSIZE))
+    {
+        mywrite(gd, buf, n);
+    }
+
+    close_file(fd);
+    close_file(gd);
+    return 0;
+}
+
+int cpProxy()
+{
+    char *source = strtok(pathname, " ");
+    char *dest = strtok(NULL, " ");
+
+    return cp(source, dest);
+}
+
+
+int mv(char*source, char * dest)
+{
+    int ino = getino(source);
+    int fd = my_open(source, "R");
+    if (!ino)
+    {
+        printf("File does not exist: %s\n", source);
+        return -1;
+    }
+    int dev = running->fd[fd]->mptr->dev;
+    if(running->cwd->dev == dev)
+    {
+        if (link(source, dest) == -1)
+            return -1;
+    }
+    else
+    {
+        if (cp(source,dest) == -1)
+            return -1;
+    }
+    if (my_unlink(source) == -1)
+        return -1;
+}
+
+int mvProxy()
+{
+    char *source = strtok(pathname, " ");
+    char *dest = strtok(NULL, " ");
+
+    return mv(source, dest);
+}
+
 

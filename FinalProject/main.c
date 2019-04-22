@@ -109,7 +109,7 @@ int main(int argc, char *argv[ ])
 
   //printf("hit a key to continue : "); getchar();
   while(1){
-    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch|chmod|rmdir|open|cat|read] ");
+    printf("input command : [ls|cd|pwd|quit|mkdir|creat|link|unlink|symlink|stat|touch|chmod|rmdir|open|cat|read|write|lseek|pfd|mv] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
     if (line[0]==0)
@@ -131,11 +131,11 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "mkdir")==0)
         mk_dir();
     if (strcmp(cmd, "creat")==0)
-        creat_file();
+        create_fileProxy();
     if (strcmp(cmd, "link")==0)
       my_link();
     if (strcmp(cmd, "unlink")==0)
-      my_unlink();
+      my_unlinkProxy();
     if (strcmp(cmd, "symlink")==0)
       my_symlink();
     if (strcmp(cmd, "stat")==0)
@@ -147,11 +147,23 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "rmdir")==0)
       my_rmdir();
     if (strcmp(cmd, "open")==0)
-      my_open();
+      proxyMyOpen();
     if (strcmp(cmd, "cat")==0)
       cat();
     if (strcmp(cmd, "read")==0)
       read_file();
+    if (strcmp(cmd, "write")==0)
+      write_file();
+    if (strcmp(cmd, "mv")==0)
+        mvProxy();
+    if (strcmp(cmd, "lseek")==0)
+      lseekProxy();
+    if (strcmp(cmd, "pfd")==0)
+      pfd();
+    if (strcmp(cmd, "close")==0)
+      closeProxy();
+    if (strcmp(cmd, "cp") == 0)
+      cpProxy();
   }
 }
 
