@@ -530,10 +530,8 @@ create_fileProxy()
     return creat_file(pathname);
 }
 
-int my_link()
+int my_link(char * oldFile, char *newLink)
 {
-    char * oldFile = strtok(pathname, " ");
-    char * newLink = strtok(NULL, " ");
 
     int oldIno = getino(oldFile);
 
@@ -579,6 +577,14 @@ int my_link()
     iput(pmip);
     return 1;
 
+}
+
+int linkProxy()
+{
+    char * oldFile = strtok(pathname, " ");
+    char * newLink = strtok(NULL, " ");
+
+    return my_link(oldFile, newLink);
 }
 
 int my_symlink(){
@@ -902,7 +908,7 @@ int myread(int fd, char buf[], int nbytes)
     MINODE *mip = oftp->mptr;
     fileSize = oftp->mptr->INODE.i_size; //file size
     avil = fileSize - (oftp->offset);
-    printf("read: available bytes to read:%d\n", avil);
+    //printf("read: available bytes to read:%d\n", avil);
     char *cq = buf;
 
     if (nbytes > avil) // can't read more than the file size available
@@ -929,6 +935,7 @@ int myread(int fd, char buf[], int nbytes)
             get_block(mip->dev, mip->INODE.i_block[13], (char*)ibuf);
             logical_block = logical_block - (BLKSIZE/sizeof(int)) - 12;
             blk = ibuf[logical_block/ (BLKSIZE / sizeof(int))];
+
             get_block(mip->dev, blk, (char*)doubleibuf);
             blk = doubleibuf[logical_block % (BLKSIZE / sizeof(int))];
         }
@@ -961,8 +968,8 @@ int myread(int fd, char buf[], int nbytes)
             remain = 0;
         }
     }
-    printf("read: ECHO=%s\n", buf);
-    printf("my_read: read %d char from file descriptor fd=%d\n", count, fd);
+    //printf("read: ECHO=%s\n", buf);
+    //printf("my_read: read %d char from file descriptor fd=%d\n", count, fd);
 
     return count;
 }
@@ -1000,12 +1007,12 @@ int cat()
 {
     char mybuf[BLKSIZE];
     int fd = 0;
-
     fd = my_open(pathname, "R"); //make sure to open for read
+    printf("=======================================\n");
     while (n=myread(fd, mybuf, BLKSIZE))
     {
         char *cp = mybuf; //char ptr
-        while ((cp < mybuf) && (*cp != 0))
+        while ((cp < mybuf + strlen(mybuf)) && (*cp != 0))
         {
             if (*cp == '\\' && *(cp + 1) == 'n') //this checks if we are at the end of the buffer
             {
@@ -1020,8 +1027,8 @@ int cat()
         }
 
     }
+    printf("\n=======================================\n");
     close_file(fd);
-    printf("\n");
 }
 
 
@@ -1166,7 +1173,6 @@ int mywrite(int fd, char buf[], int nbytes) {
             mip->INODE.i_size = oftp->offset;
         nbytes -= amount_to_write;
         put_block(mip->dev, blk, wbuf);   // write wbuf[ ] to disk
-
     }
 
     mip->dirty = 1;
@@ -1180,9 +1186,9 @@ int write_file() {
     if (writefd<0||writefd>9) {
         return -1;
     }
-    char string[1024];
+    char string[102400];
     printf("Enter the string you want to write: ");
-    fgets(string, 1024, stdin);
+    fgets(string, 102400, stdin);
     string[strlen(string)-1]=0;
 
     //	strncpy(string, pstring, strlen(pstring));
@@ -1236,7 +1242,7 @@ int mv(char*source, char * dest)
     int dev = running->fd[fd]->mptr->dev;
     if(running->cwd->dev == dev)
     {
-        if (link(source, dest) == -1)
+        if (my_link(source, dest) == -1)
             return -1;
     }
     else
@@ -1244,8 +1250,11 @@ int mv(char*source, char * dest)
         if (cp(source,dest) == -1)
             return -1;
     }
+    if (close_file(fd) == -1)
+        return -1;
     if (my_unlink(source) == -1)
         return -1;
+    return 0;
 }
 
 int mvProxy()

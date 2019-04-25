@@ -17,6 +17,7 @@
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/untitled3.dir/main.c.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/untitled3.dir/main.c.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/disk" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/disk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/untitled3" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/untitled3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/main.c" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -34,8 +35,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="776">
-              <caret line="153" column="18" selection-start-line="153" selection-start-column="18" selection-end-line="153" selection-end-column="18" />
+            <state relative-caret-position="542">
+              <caret line="133" column="27" lean-forward="true" selection-start-line="133" selection-start-column="27" selection-end-line="133" selection-end-column="27" />
               <folding>
                 <element signature="e#235#253#0" expanded="true" />
                 <element signature="e#782#799#0" expanded="true" />
@@ -47,8 +48,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/cd_ls_pwd.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="320">
-              <caret line="844" column="6" selection-start-line="844" selection-start-column="4" selection-end-line="844" selection-end-column="6" />
+            <state relative-caret-position="348">
+              <caret line="12" column="17" lean-forward="true" selection-start-line="12" selection-start-column="17" selection-end-line="12" selection-end-column="17" />
             </state>
           </provider>
         </entry>
@@ -56,8 +57,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/util.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="13572">
-              <caret line="468" column="8" selection-start-line="468" selection-start-column="8" selection-end-line="468" selection-end-column="8" />
+            <state relative-caret-position="4969">
+              <caret line="400" column="13" selection-start-line="400" selection-start-column="13" selection-end-line="400" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -84,8 +85,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ino</find>
-      <find>pwd</find>
       <find>find_ino</find>
       <find>get_block</find>
       <find>my_touch</find>
@@ -95,9 +94,7 @@
       <find>/*}}}*/</find>
       <find>lstat</find>
       <find>getino</find>
-      <find>lseek</find>
       <find>12</find>
-      <find>truncate</find>
       <find>read</find>
       <find>fd is invalid</find>
       <find>open</find>
@@ -110,10 +107,14 @@
       <find>long</find>
       <find>mywrite</find>
       <find>my_open</find>
-      <find>cat</find>
       <find>write</find>
       <find>sw_kl_</find>
       <find>sw</find>
+      <find>cat</find>
+      <find>lseek</find>
+      <find>my_link</find>
+      <find>mv</find>
+      <find>truncate</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -131,9 +132,9 @@
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="134" />
-    <option name="y" value="35" />
+    <option name="y" value="81" />
     <option name="width" value="1553" />
-    <option name="height" value="2125" />
+    <option name="height" value="2079" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -190,12 +191,16 @@
       <workItem from="1555794107337" duration="5013000" />
       <workItem from="1555812671403" duration="3953000" />
       <workItem from="1555926266261" duration="3802000" />
-      <workItem from="1556088890004" duration="3647000" />
+      <workItem from="1556088890004" duration="3703000" />
+      <workItem from="1556127676480" duration="951000" />
+      <workItem from="1556151825709" duration="1878000" />
+      <workItem from="1556228173883" duration="3494000" />
+      <workItem from="1556235647164" duration="312000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="61267000" />
+    <option name="totallyTimeSpent" value="67958000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="134" y="35" width="3106" height="2125" extended-state="6" />
@@ -253,20 +258,13 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/cd_ls_pwd.c</url>
-          <line>981</line>
+          <line>988</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/util.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="13572">
-          <caret line="468" column="8" selection-start-line="468" selection-start-column="8" selection-end-line="468" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/type.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1102">
@@ -281,10 +279,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/util.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4969">
+          <caret line="400" column="13" selection-start-line="400" selection-start-column="13" selection-end-line="400" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/main.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="776">
-          <caret line="153" column="18" selection-start-line="153" selection-start-column="18" selection-end-line="153" selection-end-column="18" />
+        <state relative-caret-position="542">
+          <caret line="133" column="27" lean-forward="true" selection-start-line="133" selection-start-column="27" selection-end-line="133" selection-end-column="27" />
           <folding>
             <element signature="e#235#253#0" expanded="true" />
             <element signature="e#782#799#0" expanded="true" />
@@ -294,8 +299,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/cd_ls_pwd.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="320">
-          <caret line="844" column="6" selection-start-line="844" selection-start-column="4" selection-end-line="844" selection-end-column="6" />
+        <state relative-caret-position="348">
+          <caret line="12" column="17" lean-forward="true" selection-start-line="12" selection-start-column="17" selection-end-line="12" selection-end-column="17" />
         </state>
       </provider>
     </entry>

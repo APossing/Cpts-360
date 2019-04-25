@@ -133,7 +133,7 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "creat")==0)
         create_fileProxy();
     if (strcmp(cmd, "link")==0)
-      my_link();
+      linkProxy();
     if (strcmp(cmd, "unlink")==0)
       my_unlinkProxy();
     if (strcmp(cmd, "symlink")==0)
